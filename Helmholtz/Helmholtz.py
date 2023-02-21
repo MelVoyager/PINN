@@ -91,7 +91,8 @@ def loss_bc4(net):
 net = MLP().to(device)
 optimizer = torch.optim.Adam(params=net.parameters())
 
-for i in tqdm(range(10000)):
+history_coef = [torch.tensor(0) for i in range(4)]
+for i in tqdm(range(5000)):
     loss_list = [loss_interior(net), loss_bc1(net), loss_bc2(net), loss_bc3(net), loss_bc4(net)]
     optimizer.zero_grad()
     grads = []
@@ -102,13 +103,15 @@ for i in tqdm(range(10000)):
         optimizer.zero_grad()
         # loss_total += l
     
-    max_res_loss = max([torch.norm(grads[0][i]) for i in range(len(grads[0]))])
+    mean_res_loss = torch.mean(torch.tensor(
+        [torch.norm(grads[0][i]) for i in range(len(grads[0]))]))
     mean_constrain_loss = []
     for i in range(1, len(loss_list)):
-        mean_constrain_loss.append(torch.mean(
+        mean_constrain_loss.append(torch.max(
             torch.tensor([torch.norm(grads[i][j]) for j in range(len(grads[i]))])))
-    coef = [max_res_loss/constrain_loss for constrain_loss in mean_constrain_loss]
-    
+    coef = [mean_res_loss/constrain_loss * 0.9 for constrain_loss in mean_constrain_loss] \
+           + [i * 0.9 for i in history_coef] 
+    history_coef = coef
     # optimizer.zero_grad()
     loss_total = loss_interior(net)\
         + coef[0] * loss_bc1(net)\
