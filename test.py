@@ -11,8 +11,8 @@
 # net = network()
 # print(net.parameters)
 
-import numpy as np
-import deepxde as dde
+# import numpy as np
+# import deepxde as dde
 
 # x_lower = -5
 # x_upper = 5
@@ -29,9 +29,9 @@ import deepxde as dde
 
 # x = 1
 
-x = np.asarray([[1, 2], [3, 4], [5, 6]])
-print(x[:,0:1])
-print(np.shape(x[:, 0:1]))
+# x = np.asarray([[1, 2], [3, 4], [5, 6]])
+# print(x[:,0:1])
+# print(np.shape(x[:, 0:1]))
 
 # layer = [2] + [32] * 3 + [1]
 # print(layer)
@@ -52,3 +52,16 @@ print(np.shape(x[:, 0:1]))
 # x = [[1, 2], [3, 4], [5, 6]]
 # print(np.zeros_like(0))
 # print(zero_velocity_top_wall(x))
+
+import torch
+
+x=torch.rand(2,2,requires_grad=True)
+print(x)
+y=2*x+2
+print(y)
+z=torch.sum(y)
+print(z)
+
+print(torch.autograd.grad(z,y)[0])
+dzdy = torch.autograd.grad(z,y)[0]
+print(torch.autograd.grad(y, x, grad_outputs=dzdy)[0])

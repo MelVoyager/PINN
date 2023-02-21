@@ -59,7 +59,7 @@ optimizer = "adam"
 model = dde.Model(data, net)
 model.compile(optimizer, lr=1e-3)
 
-loss_history, train_state = model.train(10000)
+loss_history, train_state = model.train(10000, model_save_path="model/burgers")
 
 # Inference
 x = torch.linspace(x_lower, x_upper, 100)
@@ -79,7 +79,9 @@ df.to_csv("data/burgers_predict.csv")
 print("Max residual is: ", float(np.max(np.abs(residual))))
 
 plt.imshow(np.reshape(u_pred, (100, 100)))
+# plt.imshow(np.reshape(residual, (100, 100)))
 plt.colorbar()
 plt.tight_layout()
 # plt.show()
 plt.savefig("fig/burgers_predict.png")
+# plt.savefig("fig/burgers_residual.png")
