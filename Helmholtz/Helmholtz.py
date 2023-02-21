@@ -1,13 +1,17 @@
 '''
-Helmholtz Problem
-
-u(x,y)=sin(\pix)sin(4\piy)
-
+### Helmholtz Problem
+$$
+u(x,y)=sin(\pi x)sin(4\pi y)
+$$
+$$
+\Delta u+u=(1-17\pi^2)sin(\pi x)sin(4\pi y)
+$$
 '''
 
 import torch
-import matplotlib.pyplot as plt
 from tqdm import tqdm
+from net_class import MLP
+import copy
 
 pi = torch.pi
 sin = torch.sin
@@ -49,26 +53,6 @@ def bc4(n=1000):
     condition = torch.zeros_like(y)
     return x.requires_grad_(True), y.requires_grad_(True), condition
 
-# Neural Network
-class MLP(torch.nn.Module):
-    def __init__(self):
-        super(MLP, self).__init__()
-        self.net = torch.nn.Sequential(
-            torch.nn.Linear(2, 32),
-            torch.nn.Tanh(),
-            torch.nn.Linear(32, 32),
-            torch.nn.Tanh(),
-            torch.nn.Linear(32, 32),
-            torch.nn.Tanh(),
-            torch.nn.Linear(32, 32),
-            torch.nn.Tanh(),
-            torch.nn.Linear(32, 1)
-        )
-
-    def forward(self, x):
-        return self.net(x)
-
-
 def gradients(u, x, order=1):
     if order == 1:
         return torch.autograd.grad(u, x, grad_outputs=torch.ones_like(u),
@@ -106,28 +90,33 @@ def loss_bc4(net):
 
 net = MLP().to(device)
 optimizer = torch.optim.Adam(params=net.parameters())
+
 for i in tqdm(range(10000)):
+    loss_list = [loss_interior(net), loss_bc1(net), loss_bc2(net), loss_bc3(net), loss_bc4(net)]
     optimizer.zero_grad()
-    loss_total = loss_interior(net) + loss_bc1(net)+ loss_bc2(net) + loss_bc3(net) + loss_bc4(net)
+    grads = []
+    for i in range(len(loss_list)):
+        l = loss_list[i]
+        l.backward()
+        grads.append(copy.deepcopy([parms.grad for name, parms in net.named_parameters()]))
+        optimizer.zero_grad()
+        # loss_total += l
+    
+    max_res_loss = max([torch.norm(grads[0][i]) for i in range(len(grads[0]))])
+    mean_constrain_loss = []
+    for i in range(1, len(loss_list)):
+        mean_constrain_loss.append(torch.mean(
+            torch.tensor([torch.norm(grads[i][j]) for j in range(len(grads[i]))])))
+    coef = [max_res_loss/constrain_loss for constrain_loss in mean_constrain_loss]
+    
+    # optimizer.zero_grad()
+    loss_total = loss_interior(net)\
+        + coef[0] * loss_bc1(net)\
+        + coef[1] * loss_bc2(net)\
+        + coef[2] * loss_bc3(net)\
+        + coef[3] * loss_bc4(net)
+
     loss_total.backward()
     optimizer.step()
-    # if(i % 1000 == 0):print(i)
     
-xc = torch.linspace(-1, 1, 500)
-xx, yy = torch.meshgrid(xc, xc)
-xx = xx.reshape(-1, 1)
-yy = yy.reshape(-1, 1)
-xy = torch.cat([xx, yy], dim=1)
-prediction = net(xy)
-res = prediction - sin(pi * xx) * sin(4 * pi * yy)
-prediction = torch.reshape(prediction, (500, 500))
-res = torch.reshape(res, (500, 500))
-
-fig, ax = plt.subplots(nrows=1, ncols=2)
-axes = ax.flatten()
-image1 = axes[0].imshow(prediction.detach().numpy())
-fig.colorbar(image1, ax=axes[0])
-image2 = axes[1].imshow(res.detach().numpy())
-fig.colorbar(image2, ax=axes[1])
-fig.tight_layout()
-plt.show()
+torch.save(net, 'Helmholtz.pth')
