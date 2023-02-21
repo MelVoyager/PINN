@@ -73,7 +73,7 @@ u_pred = model.predict(xt)
 residual = model.predict(xt, operator=pde)
 
 df = pd.DataFrame(np.reshape(u_pred, (100, 100)))
-df.to_csv("data/burgers_predict.csv")
+df.to_csv("burgers_predict.csv")
 
 
 print("Max residual is: ", float(np.max(np.abs(residual))))
@@ -83,5 +83,5 @@ plt.imshow(np.reshape(u_pred, (100, 100)))
 plt.colorbar()
 plt.tight_layout()
 # plt.show()
-plt.savefig("fig/burgers_predict.png")
-# plt.savefig("fig/burgers_residual.png")
+plt.savefig("burgers_predict.png")
+# plt.savefig("burgers_residual.png")

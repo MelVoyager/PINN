@@ -53,15 +53,21 @@
 # print(np.zeros_like(0))
 # print(zero_velocity_top_wall(x))
 
-import torch
+# import torch
 
-x=torch.rand(2,2,requires_grad=True)
-print(x)
-y=2*x+2
-print(y)
-z=torch.sum(y)
-print(z)
+# x=torch.rand(2,2,requires_grad=True)
+# print(x)
+# y=2*x+2
+# print(y)
+# z=torch.sum(y)
+# print(z)
 
-print(torch.autograd.grad(z,y)[0])
-dzdy = torch.autograd.grad(z,y)[0]
-print(torch.autograd.grad(y, x, grad_outputs=dzdy)[0])
+# print(torch.autograd.grad(z,y)[0])
+# dzdy = torch.autograd.grad(z,y)[0]
+# print(torch.autograd.grad(y, x, grad_outputs=dzdy)[0])
+
+import copy
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors

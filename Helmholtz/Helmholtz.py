@@ -7,12 +7,17 @@ u(x,y)=sin(\pix)sin(4\piy)
 
 import torch
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 pi = torch.pi
 sin = torch.sin
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+# device = torch.device("mps") if torch.has_mps else "cpu"
+print(f"Using {device} device")
+
 def rand_in_interval(size, l=-1, r=1):
-    return torch.rand(size) * (r - l) + torch.full(size, l)
+    return (torch.rand(size) * (r - l) + torch.full(size, l)).to(device)
 
 def interior(n=5000):
     x = rand_in_interval((n, 1))
@@ -77,7 +82,7 @@ loss = torch.nn.MSELoss()
 def loss_interior(net):
     x, y, condition = interior()
     output = net(torch.cat([x, y], dim=1))
-    return loss(output, condition)
+    return loss(output + gradients(output, x, 2) + gradients(output, y, 2), condition)
 
 def loss_bc1(net):
     x, y, condition = bc1()
@@ -99,24 +104,30 @@ def loss_bc4(net):
     output = net(torch.cat([x, y], dim=1))
     return loss(output, condition)
 
-net = MLP()
+net = MLP().to(device)
 optimizer = torch.optim.Adam(params=net.parameters())
-for i in range(10000):
+for i in tqdm(range(10000)):
     optimizer.zero_grad()
     loss_total = loss_interior(net) + loss_bc1(net)+ loss_bc2(net) + loss_bc3(net) + loss_bc4(net)
     loss_total.backward()
     optimizer.step()
-    if(i % 1000 == 0):print(i)
+    # if(i % 1000 == 0):print(i)
     
-xc = torch.linspace(-1, 1, 100)
+xc = torch.linspace(-1, 1, 500)
 xx, yy = torch.meshgrid(xc, xc)
 xx = xx.reshape(-1, 1)
 yy = yy.reshape(-1, 1)
 xy = torch.cat([xx, yy], dim=1)
 prediction = net(xy)
-prediction = torch.reshape(prediction, (100, 100))
+res = prediction - sin(pi * xx) * sin(4 * pi * yy)
+prediction = torch.reshape(prediction, (500, 500))
+res = torch.reshape(res, (500, 500))
 
-plt.imshow(prediction)
-plt.colorbar()
-plt.tight_layout()
+fig, ax = plt.subplots(nrows=1, ncols=2)
+axes = ax.flatten()
+image1 = axes[0].imshow(prediction.detach().numpy())
+fig.colorbar(image1, ax=axes[0])
+image2 = axes[1].imshow(res.detach().numpy())
+fig.colorbar(image2, ax=axes[1])
+fig.tight_layout()
 plt.show()

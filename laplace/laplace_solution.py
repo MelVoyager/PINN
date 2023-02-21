@@ -9,9 +9,9 @@ for x in range(100):
 
 # print(solution)
 df = pd.DataFrame(solution)
-df.to_csv("data/laplace_solution.csv")
+df.to_csv("laplace_solution.csv")
 plt.imshow(solution)
 plt.colorbar()
 plt.tight_layout()
 # plt.show()
-plt.savefig("fig/laplace_solution.png")
+plt.savefig("laplace_solution.png")

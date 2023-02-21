@@ -86,7 +86,7 @@ xy = torch.cat([xx, yy], dim=1)
 u_pred = model.predict(xy)
 
 df = pd.DataFrame(np.reshape(u_pred, (100, 100)))
-df.to_csv("data/laplace_predict.csv")
+df.to_csv("laplace_predict.csv")
 
 print("Max abs error is: ", float(torch.max(torch.abs(torch.from_numpy(u_pred) - torch.sinh(yy) * torch.sin(xx)))))
 
@@ -94,4 +94,4 @@ plt.imshow(np.reshape(u_pred, (100, 100)))
 plt.colorbar()
 plt.tight_layout()
 # plt.show()
-plt.savefig("fig/laplace_predict.png")
+plt.savefig("laplace_predict.png")
