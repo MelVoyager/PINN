@@ -92,6 +92,7 @@ net = MLP().to(device)
 optimizer = torch.optim.Adam(params=net.parameters())
 
 for i in tqdm(range(10000)):
+    # if i % 10 == 0:
     loss_list = [loss_interior(net), loss_bc1(net), loss_bc2(net), loss_bc3(net), loss_bc4(net)]
     optimizer.zero_grad()
     grads = []
@@ -100,7 +101,7 @@ for i in tqdm(range(10000)):
         l.backward()
         grads.append(copy.deepcopy([parms.grad for name, parms in net.named_parameters()]))
         optimizer.zero_grad()
-        # loss_total += l
+            # loss_total += l
     
     max_res_loss = max([torch.norm(grads[0][i]) for i in range(len(grads[0]))])
     mean_constrain_loss = []
@@ -109,7 +110,7 @@ for i in tqdm(range(10000)):
             torch.tensor([torch.norm(grads[i][j]) for j in range(len(grads[i]))])))
     coef = [max_res_loss/constrain_loss for constrain_loss in mean_constrain_loss]
     
-    # optimizer.zero_grad()
+    optimizer.zero_grad()
     loss_total = loss_interior(net)\
         + coef[0] * loss_bc1(net)\
         + coef[1] * loss_bc2(net)\
