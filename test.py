@@ -66,8 +66,5 @@
 # dzdy = torch.autograd.grad(z,y)[0]
 # print(torch.autograd.grad(y, x, grad_outputs=dzdy)[0])
 
-import copy
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import matplotlib.colors as mcolors
+import tensorflow as tf
+print(tf.__version__)

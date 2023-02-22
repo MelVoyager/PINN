@@ -1,9 +1,11 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 import seaborn as sns
 from Helmholtz2D_model_tf import Sampler, Helmholtz2D
+
 
 if __name__ == '__main__':
     
@@ -61,7 +63,7 @@ if __name__ == '__main__':
     res_sampler = Sampler(2, dom_coords, lambda x: f(x, a_1, a_2, lam), name='Forcing')
 
     # Define model
-    mode = 'M1'            # Method: 'M1', 'M2', 'M3', 'M4'
+    mode = 'M2'            # Method: 'M1', 'M2', 'M3', 'M4'
     stiff_ratio = False    # Log the eigenvalues of Hessian of losses
 
     layers = [2, 50, 50, 50, 1]

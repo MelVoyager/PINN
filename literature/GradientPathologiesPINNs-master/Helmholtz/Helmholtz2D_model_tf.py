@@ -1,4 +1,5 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import numpy as np
 import timeit
 
@@ -224,7 +225,7 @@ class Helmholtz2D:
         in_dim = size[0]
         out_dim = size[1]
         xavier_stddev = 1. / np.sqrt((in_dim + out_dim) / 2.)
-        return tf.Variable(tf.random_normal([in_dim, out_dim], dtype=tf.float32) * xavier_stddev,
+        return tf.Variable(tf.random.normal([in_dim, out_dim], dtype=tf.float32) * xavier_stddev,
                            dtype=tf.float32)
 
     # Initialize network weights and biases using Xavier initialization
