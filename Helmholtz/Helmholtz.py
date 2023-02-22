@@ -92,38 +92,41 @@ net = MLP().to(device)
 optimizer = torch.optim.Adam(params=net.parameters())
 
 def mean(X):
-    return torch.mean(torch.tensor(X))
+    return torch.mean(torch.tensor(X)).item()
 
 coef = 1
 beta = 0.9
 
 for i in tqdm(range(10000)):
-    # if i % 10 == 0:
-    loss_list = [loss_interior(net), loss_bc1(net), loss_bc2(net), loss_bc3(net), loss_bc4(net)]
-    optimizer.zero_grad()
-    grads = []
-    for i in range(len(loss_list)):
-        l = loss_list[i]
-        l.backward()
-        grads.append(copy.deepcopy([parms.grad for name, parms in net.named_parameters()]))
+    if i % 10 == 0:
+        loss_res_weights = []
+        loss_bcs_weights = []
+    
+        # 计算max_loss_res
         optimizer.zero_grad()
-            # loss_total += l
+        loss_res = loss_interior(net)
+        loss_res.backward()
+        for name, para in net.named_parameters():
+            if "weight" in name:
+                loss_res_weights.append(torch.max(torch.abs(para.grad)))
+        max_loss_res = max(loss_res_weights)
     
-    max_res_loss = max([torch.max(
-        torch.abs(grads[0][i])) for i in range(len(grads[0]))])
-    mean_constrain_loss = []
-    for i in range(1, len(loss_list)):
-        mean_constrain_loss.append(
-            mean([torch.mean(torch.abs(grads[i][j])) for j in range(len(grads[i]))]))
-    coef = (max_res_loss / mean(mean_constrain_loss)) * (1 - beta) + coef * beta
+        # 计算mean_loss_bcs
+        optimizer.zero_grad()
+        loss_bcs = coef * (loss_bc1(net) + loss_bc2(net) + loss_bc3(net) + loss_bc4(net))
+        loss_bcs.backward()
+        for name, para in net.named_parameters():
+            if "weight" in name:
+                loss_bcs_weights.append(torch.mean(torch.abs(para.grad)))
+        mean_loss_bcs = mean(loss_bcs_weights) 
     
+        # 更新coef并，加和得到loss_total
+        coef = (max_loss_res / mean_loss_bcs) * (1 - beta) + coef * beta
+        
     optimizer.zero_grad()
-    loss_total = loss_interior(net)\
-        + coef * (loss_bc1(net) + loss_bc2(net) + loss_bc3(net)+ loss_bc4(net))
-
+    loss_total = loss_interior(net) + coef * (loss_bc1(net) + loss_bc2(net) + loss_bc3(net) + loss_bc4(net))
     loss_total.backward()
     optimizer.step()
-    print(coef)
-    del loss_list, grads
+    # del loss_list, grads
     
 torch.save(net, 'Helmholtz.pth')
