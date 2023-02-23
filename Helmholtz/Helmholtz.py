@@ -11,7 +11,6 @@ $$
 import torch
 from tqdm import tqdm
 from net_class import MLP
-import copy
 
 pi = torch.pi
 sin = torch.sin
