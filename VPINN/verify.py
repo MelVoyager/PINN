@@ -7,13 +7,15 @@ from scipy import integrate
 pi = torch.pi
 sin = torch.sin
 
+# net = torch.load('variation.pth')
 net = torch.load('ordinary.pth')
+
 x_test = torch.linspace(-1, 1, 200).reshape(-1, 1)
 pred = net(x_test)
 plt.plot(x_test.detach().numpy(), pred.detach().numpy(), color='red',linewidth=1.0,linestyle='--')
 res = pred - sin(pi / 2 * x_test)
 print(torch.max(torch.abs(res)))
-# plt.show()
+plt.show()
 
 def f(x):
     pred = net(torch.tensor(x).reshape(-1, 1))
