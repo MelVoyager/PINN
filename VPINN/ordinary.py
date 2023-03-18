@@ -64,4 +64,4 @@ for i in tqdm(range(10000)):
     loss_tot.backward()
     optimizer.step()
     
-torch.save(net, 'ordinary.pth')
+torch.save(net, 'model/ordinary.pth')

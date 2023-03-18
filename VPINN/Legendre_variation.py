@@ -12,6 +12,75 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 # device = torch.device("mps") if torch.has_mps else "cpu"
 print(f"Using {device} device")
 
+class Lengendre:
+    def P_1(self, x):
+        return x
+    
+    def P_1_prime(self, x):
+        return 1
+    
+    def P_1_2prime(self, x):
+        return 0
+    
+    def P_2(self, x):
+        return 0.5 * (3 * x ** 2 - 1)
+    
+    def P_2_prime(self, x):
+        return 3 * x
+    
+    def P_2_2prime(self, x):
+        return 3
+    
+    def P_3(self, x):
+        return 0.5 * (5 * x ** 3 - 3 * x)
+    
+    def P_3_prime(self, x):
+        return 0.5 * (15 * x ** 2 - 3)
+    
+    def P_3_2prime(self, x):
+         return 15 * x
+    
+    def P_4(self, x):
+        return 0.125 * (35 * x ** 4 - 30 * x ** 2 + 3)
+    
+    def P_4_prime(self, x):
+        return 0.5 * (35 * x ** 3 - 15 * x)
+    
+    def P_4_2prime(self, x):
+        return 0.5 * (105 * x ** 2 - 15)
+    
+    def v(self, x, k=1):
+        if k==1 :
+            return self.P_2(x) - self.P_1(x)
+        
+        if k==2 :
+            return self.P_3(x) - self.P_2(x)
+        
+        if k==3 :
+            return self.P_4(x) - self.P_3(x)
+        
+    def v_prime(self, x, k=1):
+         if k==1 : 
+             return self.P_2_prime(x) - self.P_1_prime(x)
+         
+         if k==2 :
+             return self.P_3_prime(x) - self.P_2_prime(x)
+         
+         if k==3 :
+             return self.P_4_prime(x) - self.P_3_prime(x)
+         
+    def v_2prime(self, x, k=1):
+         if k==1 : 
+             return self.P_2_2prime(x) - self.P_1_2prime(x)
+         
+         if k==2 :
+             return self.P_3_2prime(x) - self.P_2_2prime(x)
+         
+         if k==3 :
+             return self.P_4_2prime(x) - self.P_3_2prime(x)
+         
+lengendre = Lengendre()
+    
 def rand_in_interval(size, l=-1, r=1):
     return (torch.rand(size) * (r - l) + torch.full(size, l)).to(device)
 
@@ -45,8 +114,6 @@ def integral(func, l=-1, r=1, density=10000, multipier = None):
         return torch.sum(torch.mul(func, multipier)) * (r - l) / density
 
 loss = torch.nn.MSELoss()
-def v(x, k=1):
-    return sin(k * pi * x)
 
 loss1 = [[] for _ in range(test_num)]
 loss2 = [[] for _ in range(test_num)]
@@ -57,8 +124,8 @@ def loss_interior_1(net, k=1):
     output = net(x)
     net_grad_2order = gradients(output, x, 2)
     
-    int1 = integral(v(x, k), multipier=net_grad_2order)
-    int2 = integral(v(x, k), multipier=condition)
+    int1 = integral(lengendre.v(x, k), multipier=net_grad_2order)
+    int2 = integral(lengendre.v(x, k), multipier=condition)
     
     loss1[k-1].append(loss(int1, int2).item())
     return loss(int1, int2)
@@ -67,9 +134,8 @@ def loss_interior_2(net, k=1):
     x, condition = interior()
     output = net(x)
     net_grad_1order = gradients(output, x, 1)
-    v_grad_1order = gradients(v(x, k), x, 1)
-    int1 = -integral(v_grad_1order, multipier=net_grad_1order)
-    int2 = integral(v(x, k), multipier=condition)
+    int1 = -integral(lengendre.v_prime(x, k), multipier=net_grad_1order)
+    int2 = integral(lengendre.v(x, k), multipier=condition)
     
     loss2[k-1].append(loss(int1, int2).item())
     return loss(int1, int2)
@@ -77,11 +143,10 @@ def loss_interior_2(net, k=1):
 def loss_interior_3(net, k=1):
     x, condition = interior()
     output = net(x)
-    v_grad_2order = -((k * pi) ** 2) * v(x, k)
-    int1 = integral(v_grad_2order, multipier=output) \
-        - (net(torch.full((1, 1), 1.))- net(torch.full((1, 1), -1.))) * k * pi * (-1)**k
+    int1 = integral(lengendre.v_2prime(x, k), multipier=output) \
+        - (net(torch.full((1, 1), 1.)) * lengendre.v_prime(1, k) - net(torch.full((1, 1), -1.)) * lengendre.v_prime(-1, k))
     int1 = torch.sum(int1)
-    int2 = integral(v(x, k), multipier=condition)
+    int2 = integral(lengendre.v(x, k), multipier=condition)
     
     loss3[k-1].append(loss(int1, int2).item())
     return loss(int1, int2)
@@ -97,7 +162,7 @@ def loss_bc2(net):
     return loss(output, condition)
 
 # net = MLP().to(device)
-net = torch.load('ordinary.pth')
+net = torch.load('model/ordinary.pth')
 optimizer = torch.optim.Adam(params=net.parameters())
 
 coef = 50
@@ -111,7 +176,7 @@ for i in tqdm(range(1000)):
     loss_tot.backward()
     optimizer.step()
     
-torch.save(net, 'model/variation.pth')
+torch.save(net, 'model/Lengendre_variation.pth')
 
 loss1_dict = []
 loss2_dict = []
@@ -122,11 +187,11 @@ for j in range(test_num):
     loss3_dict.append({str(i+1): loss for i, loss in enumerate(loss3[j])})
 
 for j in range(test_num):
-    with open(f"json/Sine/loss1_{j}.json", "w") as f:
+    with open(f"json/Lengendre/loss1_{j}.json", "w") as f:
         json.dump(loss1_dict[j], f)
     
-    with open(f"json/Sine/loss2_{j}.json", "w") as f:
+    with open(f"json/Lengendre/loss2_{j}.json", "w") as f:
         json.dump(loss2_dict[j], f)
     
-    with open(f"json/Sine/loss3_{j}.json", "w") as f:
+    with open(f"json/Lengendre/loss3_{j}.json", "w") as f:
         json.dump(loss3_dict[j], f)

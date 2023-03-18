@@ -7,8 +7,9 @@ from scipy import integrate
 pi = torch.pi
 sin = torch.sin
 
-# net = torch.load('variation.pth')
-net = torch.load('ordinary.pth')
+# net = torch.load('model/variation.pth')
+# net = torch.load('model/ordinary.pth')
+net = torch.load('model/Lengendre_variation.pth')
 
 x_test = torch.linspace(-1, 1, 200).reshape(-1, 1)
 pred = net(x_test)
