@@ -66,5 +66,25 @@
 # dzdy = torch.autograd.grad(z,y)[0]
 # print(torch.autograd.grad(y, x, grad_outputs=dzdy)[0])
 
-import tensorflow as tf
-print(tf.__version__)
+# import tensorflow as tf
+# print(tf.__version__)
+import torch
+
+def f(x, y, m=1, n=1, c=0.1, k=10):
+    term1 = (4 * torch.pi**2 * m**2 * c * torch.sin(2 * torch.pi * m * x) +
+             (2 * k**2 * torch.sinh(k * x) / torch.cosh(k * x)**3)) * torch.sin(2 * torch.pi * n * y)
+    term2 = 4 * torch.pi**2 * n**2 * (c * torch.sin(2 * torch.pi * m * x) + torch.tanh(k * x)) * torch.sin(2 * torch.pi * n * y)
+    return -(term1 + term2)
+
+def x_line(n=10000):
+    x = torch.linspace(-1, 1, n)
+    y = torch.rand(1) * 2 - 1
+    xx, yy = torch.meshgrid(x, y, indexing='ij')
+    x = xx.reshape(-1, 1)
+    y = yy.reshape(-1, 1)
+    condition = f(x, y)
+    return x.requires_grad_(True), y.requires_grad_(True), condition
+
+x, y, c = x_line()
+print(x)
+print(y)

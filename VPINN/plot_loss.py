@@ -7,7 +7,7 @@ losses = [[[] for _ in range(3)] for _ in range(3)]
 for i in range(3):
     for j in range(3):
         # with open(f"json/Sine/loss{i+1}_{j}.json", "r") as f:
-        with open(f"json/Lengendre/loss{i+1}_{j}.json", "r") as f:
+        with open(f"json/Poisson2D/loss{i+1}_{j}.json", "r") as f:
             losses[i][j] = json.load(f)
 
 fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(15, 15))
@@ -19,5 +19,5 @@ for i in range(3):
         axes[i, j].set_title(f'loss {i+1}_{j}')
 
 # plt.savefig("sine training losses.png")
-plt.savefig("lengendre training losses.png")
+plt.savefig("Poisson training losses.png")
 # plt.show()

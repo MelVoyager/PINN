@@ -8,20 +8,11 @@ sin = torch.sin
 cos = torch.cos
 test_num = 3
 
-# device = "cuda" if torch.cuda.is_available() else "cpu"
-device = torch.device("mps") if torch.has_mps else "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+# device = torch.device("mps") if torch.has_mps else "cpu"
 print(f"Using {device} device")
 
 class Lengendre:
-    def P_0(self, x):
-        return 1
-    
-    def P_0_prime(self, x):
-        return 0
-    
-    def P_0_2prime(self, x):
-        return 0
-    
     def P_1(self, x):
         return x
     
@@ -60,33 +51,33 @@ class Lengendre:
     
     def v(self, x, k=1):
         if k==1 :
-            return self.P_2(x) - self.P_0(x)
+            return self.P_2(x) - self.P_1(x)
         
         if k==2 :
-            return self.P_3(x) - self.P_1(x)
+            return self.P_3(x) - self.P_2(x)
         
         if k==3 :
-            return self.P_4(x) - self.P_2(x)
+            return self.P_4(x) - self.P_3(x)
         
     def v_prime(self, x, k=1):
          if k==1 : 
-             return self.P_2_prime(x) - self.P_0_prime(x)
+             return self.P_2_prime(x) - self.P_1_prime(x)
          
          if k==2 :
-             return self.P_3_prime(x) - self.P_1_prime(x)
+             return self.P_3_prime(x) - self.P_2_prime(x)
          
          if k==3 :
-             return self.P_4_prime(x) - self.P_2_prime(x)
+             return self.P_4_prime(x) - self.P_3_prime(x)
          
     def v_2prime(self, x, k=1):
          if k==1 : 
-             return self.P_2_2prime(x) - self.P_0_2prime(x)
+             return self.P_2_2prime(x) - self.P_1_2prime(x)
          
          if k==2 :
-             return self.P_3_2prime(x) - self.P_1_2prime(x)
+             return self.P_3_2prime(x) - self.P_2_2prime(x)
          
          if k==3 :
-             return self.P_4_2prime(x) - self.P_2_2prime(x)
+             return self.P_4_2prime(x) - self.P_3_2prime(x)
          
 lengendre = Lengendre()
     
@@ -94,19 +85,18 @@ def rand_in_interval(size, l=-1, r=1):
     return (torch.rand(size) * (r - l) + torch.full(size, l)).to(device)
 
 def interior(n=10000):
-    eps = torch.rand(1).item() / n
-    x = torch.linspace(-1, 1 - eps, n).reshape(-1, 1).to(device)
+    x = torch.linspace(-1, 1, n).reshape(-1, 1)
     condition = -(pi ** 2) / 4 * sin(pi * x / 2)
-    return x.requires_grad_(True), condition.to(device)
+    return x.requires_grad_(True), condition
 
 def bc1(n=1000):
     x = rand_in_interval((n, 1), r= -1)
-    condition = torch.full_like(x, -1).to(device)
+    condition = torch.full_like(x, -1)
     return x.requires_grad_(True), condition
 
 def bc2(n=1000):
     x = rand_in_interval((n, 1), l= 1)
-    condition = torch.full_like(x, 1).to(device)
+    condition = torch.full_like(x, 1)
     return x.requires_grad_(True), condition
 
 def gradients(u, x, order=1):
@@ -154,7 +144,7 @@ def loss_interior_3(net, k=1):
     x, condition = interior()
     output = net(x)
     int1 = integral(lengendre.v_2prime(x, k), multipier=output) \
-        - (net(torch.full((1, 1), 1.).to(device)) * lengendre.v_prime(1, k) - net(torch.full((1, 1), -1.).to(device)) * lengendre.v_prime(-1, k))
+        - (net(torch.full((1, 1), 1.)) * lengendre.v_prime(1, k) - net(torch.full((1, 1), -1.)) * lengendre.v_prime(-1, k))
     int1 = torch.sum(int1)
     int2 = integral(lengendre.v(x, k), multipier=condition)
     
