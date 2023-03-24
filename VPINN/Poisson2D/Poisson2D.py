@@ -33,12 +33,15 @@ def interior(n=10000):
     condition = f(x, y)
     return x.requires_grad_(True), y.requires_grad_(True), condition
 
-def x_line(n=10000):
+def grid(n=100):
     x = torch.linspace(-1, 1, n)
-    y = torch.rand(1) * 2 - 1
+    y = torch.linspace(-1, 1, n)
     xx, yy = torch.meshgrid(x, y, indexing='ij')
     x = xx.reshape(-1, 1)
     y = yy.reshape(-1, 1)
+    perm = torch.randperm(len(x))
+    x = x[perm]
+    y = y[perm]
     condition = f(x, y)
     return x.requires_grad_(True), y.requires_grad_(True), condition
 
@@ -97,7 +100,7 @@ def loss_interior_ordinary(net, k=1):
     return loss(lhs, condition)
 
 def loss_interior_1(net, k=1):
-    x, y, condition = x_line()
+    x, y, condition = grid()
     output = net(torch.cat([x, y], dim=1))
     x_grad_2order = gradients(output, x, 2)
     y_grad_2order = gradients(output, y, 2)
@@ -108,32 +111,42 @@ def loss_interior_1(net, k=1):
     # print(loss(int1, int2))
     return loss(int1, int2)
 
+def v(x, y, k1=1, k2=1):
+    return lengendre.v(x, k1) * lengendre.v(y, k2)
 
-def loss_interior_2(net, k=1):
-    x, y, condition = x_line()
+def gradient_v(x, y, k1=1, k2=1):
+    return torch.tensor([lengendre.v_prime(x, k1) * lengendre.v(y, k2), lengendre.v(x, k1) * lengendre.v_prime(y, k2)])
+
+def gradient_u(x, y):
+    dx = 0.2 * torch.pi * torch.cos(2*torch.pi*x) + 10 * (1 / torch.cosh(10*x))**2
+    dy = 2 * torch.pi * (0.1 * torch.sin(2*torch.pi*x) + torch.tanh(10*x)) * torch.cos(2*torch.pi*y)
+    return torch.tensor([dx, dy])
+
+def loss_interior_2(net, k1=1, k2=1):
+    x, y, condition = grid()
     output = net(torch.cat([x, y], dim=1))
     x_grad_1order = gradients(output, x, 1)
-    y_grad_2order = gradients(output, y, 2)
-    int1 = -integral(lengendre.v_prime(x, k), multipier=x_grad_1order) \
-           + integral(lengendre.v(x, k), multipier=(y_grad_2order))
-    int2 = integral(lengendre.v(x, k), multipier=condition)
-    
-    loss2[k-1].append(loss(int1, int2).item())
+    y_grad_1order = gradients(output, y, 1)
+    lhs = torch.tensor([torch.dot(torch.tensor([x_grad_1order[i], y_grad_1order[i]]), gradient_v(x[i], y[i], k1, k2)) for i in range(10000)])
+    # print(torch.tensor([x_grad_1order[i], y_grad_1order[i]]))
+    # print(gradient_u(x[i], y[i]))
+    rhs = torch.tensor([f(x[i], y[i]) * v(x[i], y[i], k1, k2) for i in range(10000)])
+    int1 = torch.sum(lhs)
+    int2 = torch.sum(sum(rhs))
     return loss(int1, int2)
 
-
-def loss_interior_3(net, k=1):
-    x, y, condition = x_line()
-    output = net(torch.cat([x, y], dim=1))
-    y_grad_2order = gradients(output, y, 2)
-    int1 = integral(lengendre.v_2prime(x, k), multipier=output) \
-        - (net(torch.cat([x, y], dim=1)[-1]) * lengendre.v_prime(1, k) - net(torch.cat([x, y], dim=1)[0]) * lengendre.v_prime(-1, k)) \
-        + integral(lengendre.v(x, k), multipier=(y_grad_2order))
-    int1 = torch.sum(int1)
-    int2 = integral(lengendre.v(x, k), multipier=condition)
+# def loss_interior_3(net, k=1):
+#     x, y, condition = x_line()
+#     output = net(torch.cat([x, y], dim=1))
+#     y_grad_2order = gradients(output, y, 2)
+#     int1 = integral(lengendre.v_2prime(x, k), multipier=output) \
+#         - (net(torch.cat([x, y], dim=1)[-1]) * lengendre.v_prime(1, k) - net(torch.cat([x, y], dim=1)[0]) * lengendre.v_prime(-1, k)) \
+#         + integral(lengendre.v(x, k), multipier=(y_grad_2order))
+#     int1 = torch.sum(int1)
+#     int2 = integral(lengendre.v(x, k), multipier=condition)
     
-    loss3[k-1].append(loss(int1, int2).item())
-    return loss(int1, int2)
+#     loss3[k-1].append(loss(int1, int2).item())
+#     return loss(int1, int2)
 
 def loss_bc1(net):
     x, y, condition = bc1()
@@ -155,8 +168,8 @@ def loss_bc4(net):
     output = net(torch.cat([x, y], dim=1))
     return loss(output, condition)
 
-net = MLP().to(device)
-# net = torch.load('ordinary.pth')
+# net = MLP().to(device)
+net = torch.load('ordinary.pth')
 optimizer = torch.optim.Adam(params=net.parameters())
 
 coef = 50
@@ -165,8 +178,7 @@ for i in tqdm(range(10000)):
     optimizer.zero_grad()
     # loss_tot =  loss_interior_ordinary(net) + \
     loss_tot = loss_interior_1(net, 1) + loss_interior_1(net, 2) + loss_interior_1(net, 3) \
-                + loss_interior_2(net, 1) + loss_interior_2(net, 2) + loss_interior_2(net, 3) \
-                + loss_interior_3(net, 1) +  loss_interior_3(net, 2)+ loss_interior_3(net, 3) \
+                + loss_interior_2(net, 1, 1) + loss_interior_2(net, 2, 2) + loss_interior_2(net, 3, 3) \
                 + coef * (loss_bc1(net) + loss_bc2(net) + loss_bc3(net) + loss_bc4(net)) 
                 
     loss_tot.backward()
