@@ -22,18 +22,25 @@ class MyLinearLayer(nn.Module):
     def forward(self, x):
         w_times_x= torch.mm(x, self.weights.t())
         return torch.add(w_times_x, self.bias)  # w times x + b
-    
+
 # Neural Network
 class MLP(torch.nn.Module):
     def __init__(self):
         super(MLP, self).__init__()
         self.net = torch.nn.Sequential(
+            # torch.nn.Linear(2, 32),
             MyLinearLayer(2, 32),
             torch.nn.Tanh(),
+            # torch.nn.Linear(32, 32),
             MyLinearLayer(32, 32),
             torch.nn.Tanh(),
+            # torch.nn.Linear(32, 32),
             MyLinearLayer(32, 32),
             torch.nn.Tanh(),
+            # torch.nn.Linear(32, 32),
+            MyLinearLayer(32, 32),
+            torch.nn.Tanh(),
+            # torch.nn.Linear(32, 1)
             MyLinearLayer(32, 1)
         )
 
