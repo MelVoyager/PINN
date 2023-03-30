@@ -132,11 +132,6 @@ dx = gradients(u, xx, 1)
 dy = gradients(u, yy, 1)
 du = torch.cat([dx, dy], dim=1)
 
-
-
-
-
-
 # s1 = torch.sum(gradient_u(xx, yy) * torch.cat([gradients(v(xx, yy, 2), xx), gradients(v(xx, yy, 2), yy)], dim=1))
 s1 = torch.sum(gradient_u(xx, yy) * gradient_v(xx, yy, 2))
 s2 = torch.sum(f(xx, yy) * v(xx, yy, 2))
@@ -147,7 +142,7 @@ print(s1, s2, s3)
 # y = lengendre.v_prime(x_frame, 3)
 # plt.imshow((torch.sum(du * gradient_v(xx, yy, 2), dim=1, keepdim=True)).reshape(N, N).detach().numpy())
 # plt.imshow((gradients(u, xx, order=2) + gradients(u, yy, order=2)).reshape(N, N).detach().numpy())
-plt.imshow((f(xx, yy)).reshape(N, N).detach().numpy())
+plt.imshow((gradient_v(xx, yy, 3)[:,0]).reshape(N, N).detach().numpy())
 plt.colorbar()
 plt.show()
 
