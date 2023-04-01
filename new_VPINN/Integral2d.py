@@ -1,27 +1,46 @@
 from GaussJacobiQuadRule_V3 import GaussLobattoJacobiWeights
 import basis
 import torch
+import lengendre
+from net_class import MLP
+import os, sys
 
-Q = 10
-a, b = 0, 0
-[X, W] = GaussLobattoJacobiWeights(Q, a, b)
+# os.chdir(sys.path[0])
+class Quad_Integral:
+    
+    def init(self):
+        Q = 10
+        a, b = 0, 0
+        [X, W] = GaussLobattoJacobiWeights(Q, a, b)
 
-def u(x, y):
-    return x**2 + y**2
+        X, Wx = torch.tensor(X,dtype=torch.float32), torch.tensor(W, dtype=torch.float32)
+        Y, Wy = X, Wx
+        self.XX, self.YY = torch.meshgrid(X, Y, indexing='ij')
+        self.Wxx, self.Wyy = torch.meshgrid(Wx, Wy, indexing='ij')
+        self.XX = self.XX.reshape(-1, 1)
+        self.YY = self.YY.reshape(-1, 1)
+        self.Wxx = self.Wxx.reshape(-1, 1)
+        self.Wyy = self.Wyy.reshape(-1, 1)
+    
+    def integral(self, u, k1, k2, index):
+        integral = torch.sum(torch.bmm(u(self.XX, self.YY, index, k1, k2), (self.Wxx * self.Wyy).view(100, 1, 1)))
+        return integral
 
-X, Wx = torch.tensor(X), torch.tensor(W)
-Y, Wy = X, Wx
-# print(X)
-# print(Wx)
-XX, YY = torch.meshgrid(X, Y, indexing='ij')
-Wxx, Wyy = torch.meshgrid(Wx, Wy, indexing='ij')
-integral = torch.sum(u(XX, YY) * (Wxx * Wyy))
-# integral = 0
-# for i in range(Q):
-#     for j in range(Q):
-#         x_i, y_j = X[i], X[j]
-#         w_i, w_j = W[i], W[j]
-#         integral += u(x_i, y_j) * w_i * w_j
+quad_integral = Quad_Integral()
+# net = torch.load('ordinary.pth')
+# def wrapper1(x, y):
+#     return basis.f(x, y) * lengendre.v(0, 2, x, y)
 
-print(integral)
+# def wrapper2(x, y):
+#     return torch.sum(basis.gradient_u(x, y) * lengendre.v(1, 2, x, y),dim=1, keepdim=True)
 
+# def wrapper3(x, y):
+    # xx = torch.tensor(x).reshape(-1, 1).requires_grad_(True)
+    # yy = torch.tensor(y).reshape(-1, 1).requires_grad_(True)
+    # u = net(torch.cat([xx, yy], dim=1))
+    # dx = basis.gradients(u, xx, 1)
+    # dy = basis.gradients(u, yy, 1)
+    # du = torch.cat([dx, dy], dim=1)
+    # return torch.sum(du * lengendre.v(1, 2, x, y),dim=1, keepdim=True)
+    
+# print(quad_integral(wrapper1),quad_integral(wrapper2),quad_integral(wrapper3))

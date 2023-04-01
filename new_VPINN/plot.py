@@ -1,7 +1,9 @@
 import torch
 import matplotlib.pyplot as plt
 from net_class import MLP
+import os, sys
 
+os.chdir(sys.path[0])
 pi = torch.pi
 sin = torch.sin
 
@@ -9,7 +11,8 @@ def u(x, y):
     return (0.1 * torch.sin(2 * torch.pi * x) + torch.tanh(10 * x)) * torch.sin(2 * torch.pi * y)
 
 # net = torch.load('ordinary.pth')
-net = torch.load('Poisson2D.pth')
+# net = torch.load('Poisson2D.pth')
+net = torch.load('Poisson2DBased.pth')
 xc = torch.linspace(-1, 1, 500)
 xx, yy = torch.meshgrid(xc, xc, indexing='ij')
 xx = xx.reshape(-1, 1)
@@ -30,4 +33,5 @@ image2 = axes[1].imshow(res.detach().numpy())
 fig.colorbar(image2, ax=axes[1])
 fig.tight_layout()
 plt.savefig("prediction_and_residual.png")
+print(torch.norm(res) / torch.norm(u(xx, yy)))
 plt.show()

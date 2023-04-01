@@ -1,7 +1,7 @@
 import torch
 import math
 import torch.nn as nn
-import numpy as np
+import torch.nn.init as init
 
 class MyLinearLayer(nn.Module):
     """ Custom Linear layer but mimics a standard linear layer """
@@ -28,14 +28,27 @@ class MLP(torch.nn.Module):
     def __init__(self):
         super(MLP, self).__init__()
         self.net = torch.nn.Sequential(
-            MyLinearLayer(2, 32),
+            MyLinearLayer(2, 5),
             torch.nn.Tanh(),
-            MyLinearLayer(32, 32),
+            MyLinearLayer(5, 5),
             torch.nn.Tanh(),
-            MyLinearLayer(32, 32),
+            MyLinearLayer(5, 5),
             torch.nn.Tanh(),
-            MyLinearLayer(32, 1)
+            MyLinearLayer(5, 5),
+            torch.nn.Tanh(),
+            MyLinearLayer(5, 1)
         )
+        self.initialize_weights()
 
+    def initialize_weights(self):
+        for module in self.modules():
+            if isinstance(module, nn.Linear):
+                # 使用 xavier_uniform_ 初始化
+                # init.xavier_uniform_(module.weight)
+                # 或者，使用 xavier_normal_ 初始化
+                init.xavier_normal_(module.weight)
+                # 初始化偏置项为零
+                init.zeros_(module.bias)
+                
     def forward(self, x):
         return self.net(x)

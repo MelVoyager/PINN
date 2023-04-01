@@ -131,8 +131,8 @@ def loss_bc4(net):
     output = net(torch.cat([x, y], dim=1))
     return loss(output, condition)
 
-# net = MLP().to(device)
-net = torch.load('ordinary.pth')
+net = MLP().to(device)
+# net = torch.load('ordinary.pth')
 optimizer = torch.optim.Adam(params=net.parameters())
 
 coef = 50

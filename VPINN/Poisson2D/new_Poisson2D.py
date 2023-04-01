@@ -114,9 +114,9 @@ def loss_interior_1(net, k=1):
     output = net(torch.cat([x, y], dim=1))
     x_grad_2order = gradients(output, x, 2)
     y_grad_2order = gradients(output, y, 2)
-    int1 = torch.sum(lengendre.v(x, k) * (x_grad_2order + y_grad_2order)) * ((2 / N) ** 2)
-    int2 = torch.sum(lengendre.v(x, k) * condition) * ((2 / N) ** 2)
-    int3 = torch.sum(lengendre.v(x, k) * gradient_u_2order(x, y)) * ((2 / N) ** 2)
+    int1 = torch.sum(new_lengendre.v(0, k, x, y) * (x_grad_2order + y_grad_2order)) * ((2 / N) ** 2)
+    int2 = torch.sum(new_lengendre.v(0, k, x, y) * condition) * ((2 / N) ** 2)
+    # int3 = torch.sum(new_lengendre.v(0, k, x, y) * gradient_u_2order(x, y)) * ((2 / N) ** 2)
     # int1 = integral(lengendre.v(x, k), multipier=(x_grad_2order + y_grad_2order))
     # int2 = integral(lengendre.v(x, k), multipier=condition)
     
@@ -187,7 +187,7 @@ coef = 10
 for i in tqdm(range(1000)):
     optimizer.zero_grad()
     # loss_tot =  loss_interior_ordinary(net) + \
-    loss_tot = loss_interior_1(net, 1) + loss_interior_1(net, 2) \
+    loss_tot = loss_interior_1(net, 1) + loss_interior_1(net, 2) + loss_interior_1(net, 3)\
                 + loss_interior_2(net, 1) + loss_interior_2(net, 2) + loss_interior_2(net, 3)\
                 + loss_interior_2(net, 4) + loss_interior_2(net, 5) + loss_interior_2(net, 6)\
                 + coef * (loss_bc1(net) + loss_bc2(net) + loss_bc3(net) + loss_bc4(net)) 
