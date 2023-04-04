@@ -329,8 +329,8 @@ def loss_bc4(net):
 #     output = net(torch.cat([x, y], dim=1))
 #     return loss(output, condition)
 
-net = MLP().to(device)
-# net = torch.load('ordinary.pth')
+# net = MLP().to(device)
+net = torch.load('ordinary.pth')
 
 def train():
     
@@ -346,7 +346,7 @@ def train():
         # b = 2000
         # coef = a * math.log(i + 1) + b
         optimizer.zero_grad()
-        loss_tot = loss_interior_1(net) \
+        loss_tot = loss_interior_2(net) \
         + coef * (loss_bc1(net) + loss_bc2(net) + loss_bc3(net) + loss_bc4(net))
         # loss_tot = loss_interior_2(net) + coef * (loss_bc1(net) + loss_bc2(net) + loss_bc3(net) + loss_bc4(net))
         # print(loss_interior_1(net))

@@ -28,15 +28,15 @@ class MLP(torch.nn.Module):
     def __init__(self):
         super(MLP, self).__init__()
         self.net = torch.nn.Sequential(
-            MyLinearLayer(2, 5),
+            MyLinearLayer(2, 10),
             torch.nn.Tanh(),
-            MyLinearLayer(5, 5),
+            MyLinearLayer(10, 10),
             torch.nn.Tanh(),
-            MyLinearLayer(5, 5),
+            MyLinearLayer(10, 10),
             torch.nn.Tanh(),
-            MyLinearLayer(5, 5),
+            MyLinearLayer(10, 10),
             torch.nn.Tanh(),
-            MyLinearLayer(5, 1)
+            MyLinearLayer(10, 1)
         )
         self.initialize_weights()
 
