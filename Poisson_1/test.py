@@ -11,8 +11,8 @@ os.chdir(sys.path[0])
 # train the model
 # vpinn = VPINN([2, 10, 10, 10, 1], f, u, type=1, Q=100, grid_num=4, boundary_num=80, test_fcn_num=5, 
 #             device='cpu', load='Sine[2, 10, 10, 10, 1](type=0,Q=10,grid_num=8,boundary_num=80,test_fcn=5).pth')
-vpinn = VPINN([2, 20, 20, 20, 1], f, u, type=0, Q=50, grid_num=4, boundary_num=80, test_fcn_num=5, 
-            device='cpu', load='Poisson[2, 20, 20, 20, 1](type=1,Q=50,grid_num=4,boundary_num=80,test_fcn=5,load=None,epoch=20000).pth')
+vpinn = VPINN([2, 10, 10, 10, 1], f, u, type=1, Q=50, grid_num=4, boundary_num=80, test_fcn_num=5, 
+            device='cpu', load=None)
 net = vpinn.train("Poisson", epoch_num=10000)
 
 

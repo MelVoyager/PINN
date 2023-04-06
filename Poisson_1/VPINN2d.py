@@ -143,7 +143,7 @@ class VPINN:
         return self.loss(int1, int2)
     
     def loss_interior_2(self):
-        int1 = quad_integral.integral(self.DeltaWrapper) * ((1 / self.grid_num) ** 2)
+        int1 = -quad_integral.integral(self.DeltaWrapper) * ((1 / self.grid_num) ** 2)
         int2 = quad_integral.integral(self.fWrapper) * ((1 / self.grid_num) ** 2)
         # int3 = quad_integral.integral(self.LaplaceWrapper) * ((1 / self.grid_num) ** 2)
         return self.loss(int1, int2)
