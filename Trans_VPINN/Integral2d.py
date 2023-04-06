@@ -6,11 +6,9 @@ from net_class import MLP
 import os, sys
 
 # os.chdir(sys.path[0])
-device = "cuda" if torch.cuda.is_available() else "cpu"
-# device = torch.device("mps") if torch.has_mps else "cpu"
 class Quad_Integral:
     
-    def init(self, Q):
+    def init(self, Q, device):
         self.Q = Q
         a, b = 0, 0
         [X, W] = GaussLobattoJacobiWeights(Q, a, b)

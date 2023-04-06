@@ -24,19 +24,21 @@ class MyLinearLayer(nn.Module):
         return torch.add(w_times_x, self.bias)  # w times x + b
     
 # Neural Network
+
+neuron_num = 7
 class MLP(torch.nn.Module):
     def __init__(self):
         super(MLP, self).__init__()
         self.net = torch.nn.Sequential(
-            MyLinearLayer(2, 10),
+            MyLinearLayer(2, neuron_num),
             torch.nn.Tanh(),
-            MyLinearLayer(10, 10),
+            MyLinearLayer(neuron_num, neuron_num),
             torch.nn.Tanh(),
-            MyLinearLayer(10, 10),
+            MyLinearLayer(neuron_num, neuron_num),
             torch.nn.Tanh(),
-            MyLinearLayer(10, 10),
+            MyLinearLayer(neuron_num, neuron_num),
             torch.nn.Tanh(),
-            MyLinearLayer(10, 1)
+            MyLinearLayer(neuron_num, 1)
         )
         self.initialize_weights()
 

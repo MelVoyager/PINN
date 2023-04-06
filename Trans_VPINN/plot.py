@@ -11,7 +11,7 @@ def u(x, y):
     return (0.1 * torch.sin(2 * torch.pi * x) + torch.tanh(10 * x)) * torch.sin(2 * torch.pi * y)
 
 # net = torch.load('ordinary.pth')
-net = torch.load('Poisson2D.pth')
+net = torch.load('class_model.pth')
 # net = torch.load('Poisson2DBased.pth')
 xc = torch.linspace(-1, 1, 500)
 xx, yy = torch.meshgrid(xc, xc, indexing='ij')
