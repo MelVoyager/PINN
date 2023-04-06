@@ -1,11 +1,10 @@
 import torch
 from .GaussJacobiQuadRule_V3 import GaussLobattoJacobiWeights
-from .net_class import MLP
 
 # os.chdir(sys.path[0])
 class Quad_Integral:
     
-    def init(self, Q, device):
+    def init(self, Q, device='cpu'):
         self.Q = Q
         a, b = 0, 0
         [X, W] = GaussLobattoJacobiWeights(Q, a, b)

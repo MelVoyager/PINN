@@ -1,11 +1,12 @@
 import torch
+import net_class
 from tqdm import tqdm
 from Utilities.Integral2d import quad_integral
 from Utilities.lengendre import test_func
-from Utilities.net_class import MLP
+from net_class import MLP
 
 class VPINN:
-    def __init__(self, f, u, layer_sizes, type=0, Q=10, grid_num=8, boundary_num=80, test_fcn_num=5, device='cpu', load=None):
+    def __init__(self, layer_sizes, f, u=None, type=0, Q=10, grid_num=8, boundary_num=80, test_fcn_num=5, device='cpu', load=None):
         self.type =type
         self.f = f
         self.u = u
@@ -17,6 +18,7 @@ class VPINN:
         self.device = device
         self.layer_sizes = layer_sizes
         if load:
+            self.net = MLP(layer_sizes).to(device)
             self.net = torch.load('./model/'+load).to(device)
         else:
             self.net = MLP(layer_sizes).to(device)
@@ -92,17 +94,22 @@ class VPINN:
         result = f.view(self.grid_num ** 2, self.Q ** 2) * test_func.test_func(0, x, y).squeeze(-1).unsqueeze(0).expand(self.grid_num ** 2, self.Q ** 2)
         return result
     
+    # def gradient_u(self, x, y):
+    #     du_dx = torch.tensor(0.5 * torch.pi * torch.cos(0.5 * torch.pi * (x + 1)) * torch.sin(0.5 * torch.pi * (y + 1)))
+    #     du_dy = torch.tensor(torch.sin(0.5 * torch.pi * (x + 1)) * 0.5 * torch.pi * torch.cos(0.5 * torch.pi * (y + 1)))
+    #     return du_dx, du_dy
+    
     def DeltaWrapper(self, x, y):
         u = self.net(torch.cat([self.grid_xs, self.grid_ys], dim=1))
         dx = self.gradients(u, self.grid_xs, 1)
         dy = self.gradients(u, self.grid_ys, 1)
+        # ext_dx , ext_dy = self.gradient_u(self.grid_xs, self.grid_ys)
         du = torch.cat([dx, dy], dim=1) * self.grid_num
-        n = self.grid_num * self.grid_num
         
-        du = du.view(n, self.Q ** 2, 2)
-        dv = (test_func.test_func(1, x, y)).unsqueeze(0).repeat(n, 1, 1)
+        du = du.view(self.grid_num ** 2, self.Q ** 2, 2)
+        dv = (test_func.test_func(1, x, y)).view(1, self.Q ** 2, 2)
         result = (du * dv).sum(dim=-1)
-        return result
+        return result.view(-1, self.Q ** 2)
 
     def loss_bc(self):
         prediction = self.net(torch.cat([self.boundary_xs, self.boundary_ys], dim=1))
