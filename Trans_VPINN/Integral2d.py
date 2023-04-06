@@ -10,8 +10,8 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 # device = torch.device("mps") if torch.has_mps else "cpu"
 class Quad_Integral:
     
-    def init(self):
-        Q = 10
+    def init(self, Q):
+        self.Q = Q
         a, b = 0, 0
         [X, W] = GaussLobattoJacobiWeights(Q, a, b)
 
@@ -24,8 +24,8 @@ class Quad_Integral:
         self.Wxx = self.Wxx.reshape(-1, 1).to(device)
         self.Wyy = self.Wyy.reshape(-1, 1).to(device)
     
-    def integral(self, u, k1, k2, index):
-        integral = torch.sum(u(self.XX, self.YY, index, k1, k2) * (self.Wxx * self.Wyy).squeeze(-1).unsqueeze(0).expand(-1, 100))
+    def integral(self, u):
+        integral = torch.sum(u(self.XX, self.YY) * (self.Wxx * self.Wyy).squeeze(-1).unsqueeze(0).expand(-1, self.Q ** 2))
         return integral
 
 quad_integral = Quad_Integral()
