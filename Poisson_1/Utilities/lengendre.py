@@ -45,7 +45,7 @@ class Test_Func:
         self.test_func_num = test_func_num
         
     def test_func(self, k, x, y):
-        ret = 0
+        ret = []
         
         if self.test_func_num==0:
             return torch.ones_like(x)
@@ -53,8 +53,9 @@ class Test_Func:
         else:
             for n1 in range(1, self.test_func_num + 1):
                 for n2 in range(1, self.test_func_num + 1):
-                    ret = ret + v(k, n1, n2, x, y)
-            return ret
+                    ret.append(v(k, n1, n2, x, y))
+            return torch.stack(ret, dim=0)
+            # return torch.cat(ret, dim=1).t()
         # return torch.sum(torch.tensor([[[v(k, n1, n2, x, y)] for n1 in range(self.test_func_num)] for n2 in range(self.test_func_num)]))
     
 test_func = Test_Func()

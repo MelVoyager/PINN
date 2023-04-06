@@ -10,7 +10,7 @@ sin = torch.sin
 def u(x, y):
     return (0.1 * torch.sin(2 * torch.pi * x) + torch.tanh(10 * x)) * torch.sin(2 * torch.pi * y)
 
-net = torch.load('./model/Sine[2, 10, 10, 10, 1](type=0,Q=10,grid_num=8,boundary_num=80,test_fcn=5).pth')
+net = torch.load('./model/Poisson[2, 20, 20, 20, 1](type=0,Q=10,grid_num=8,boundary_num=80,test_fcn=5).pth')
 xc = torch.linspace(-1, 1, 500)
 xx, yy = torch.meshgrid(xc, xc, indexing='ij')
 xx = xx.reshape(-1, 1)

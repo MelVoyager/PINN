@@ -129,7 +129,7 @@ class VPINN:
 
     def loss_bc(self):
         prediction = self.net(torch.cat([self.boundary_xs, self.boundary_ys], dim=1))
-        solution = self.u(self.boundary_xs, self.boundary_ys)
+        solution = torch.zeros_like(self.boundary_xs)
         return self.loss(prediction, solution)
     
     def loss_circle_bc(self):
