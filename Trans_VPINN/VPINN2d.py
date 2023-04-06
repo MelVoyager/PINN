@@ -1,11 +1,11 @@
 import torch
-from Integral2d import quad_integral
-from lengendre import test_func
 from tqdm import tqdm
-from net_class import MLP
+from Utilities.Integral2d import quad_integral
+from Utilities.lengendre import test_func
+from Utilities.net_class import MLP
 
 class VPINN:
-    def __init__(self, f, u, type=0, Q=10, grid_num=8, boundary_num=80, test_fcn_num=5, device='cpu', isNew=True):
+    def __init__(self, f, u, layer_sizes, type=0, Q=10, grid_num=8, boundary_num=80, test_fcn_num=5, device='cpu', load=None):
         self.type =type
         self.f = f
         self.u = u
@@ -15,10 +15,11 @@ class VPINN:
         self.test_fcn_num = test_fcn_num
         self.loss = torch.nn.MSELoss()
         self.device = device
-        if isNew:
-            self.net = MLP().to(device)
+        self.layer_sizes = layer_sizes
+        if load:
+            self.net = torch.load('./model/'+load).to(device)
         else:
-            self.net = torch.load('ordinary.pth').to(device)
+            self.net = MLP(layer_sizes).to(device)
         xs = []
         ys = []
         quad_integral.init(Q,device)
@@ -91,6 +92,18 @@ class VPINN:
         result = f.view(self.grid_num ** 2, self.Q ** 2) * test_func.test_func(0, x, y).squeeze(-1).unsqueeze(0).expand(self.grid_num ** 2, self.Q ** 2)
         return result
     
+    def DeltaWrapper(self, x, y):
+        u = self.net(torch.cat([self.grid_xs, self.grid_ys], dim=1))
+        dx = self.gradients(u, self.grid_xs, 1)
+        dy = self.gradients(u, self.grid_ys, 1)
+        du = torch.cat([dx, dy], dim=1) * self.grid_num
+        n = self.grid_num * self.grid_num
+        
+        du = du.view(n, self.Q ** 2, 2)
+        dv = (test_func.test_func(1, x, y)).unsqueeze(0).repeat(n, 1, 1)
+        result = (du * dv).sum(dim=-1)
+        return result
+
     def loss_bc(self):
         prediction = self.net(torch.cat([self.boundary_xs, self.boundary_ys], dim=1))
         solution = self.u(self.boundary_xs, self.boundary_ys)
@@ -108,6 +121,11 @@ class VPINN:
         # print(loss(int1, int2))
         return self.loss(int1, int2)
     
+    def loss_interior_2(self):
+        int1 = torch.abs(quad_integral.integral(self.DeltaWrapper)) * ((1 / self.grid_num) ** 2)
+        int2 = torch.abs(quad_integral.integral(self.fWrapper)) * ((1 / self.grid_num) ** 2)
+        return self.loss(int1, int2)
+    
     def train(self, model_name, epoch_num=10000, coef=10):
         optimizer = torch.optim.Adam(params=self.net.parameters())
         test_func.init(self.test_fcn_num)
@@ -117,10 +135,20 @@ class VPINN:
                 optimizer.zero_grad()
                 loss = self.loss_interior_1() + coef * self.loss_bc()
                 if i % 100 == 0:
-                    print(f'loss={loss.item():.4g}')
+                    print(f'loss={loss.item():.5g}')
                 loss.backward(retain_graph=True)
                 optimizer.step()
         
-        torch.save(self.net, model_name+'.pth')
+        if self.type == 1:
+            for i in tqdm(range(epoch_num)):
+                optimizer.zero_grad()
+                loss = self.loss_interior_2() + coef * self.loss_bc()
+                if i % 100 == 0:
+                    print(f'loss={loss.item():.5g}')
+                loss.backward(retain_graph=True)
+                optimizer.step()
+        
+        torch.save(self.net, './model/'+model_name+f'{self.layer_sizes}'+f'(type={self.type}'+f',Q={self.Q}'+f',grid_num={self.grid_num}'+\
+            f',boundary_num={self.boundary_num}'+f',test_fcn={self.test_fcn_num})'+'.pth')
         return self.net
         

@@ -1,25 +1,16 @@
-from VPINN2d import VPINN
 import matplotlib.pyplot as plt
 import torch
-import net_class
 import os, sys
+from VPINN2d import VPINN
+from Function.Sine_1 import u, f
 os.chdir(sys.path[0])
 
-
 # define the pde in the form of N(u,\lambda)=f
-def u(x, y):
-    return (0.1 * torch.sin(2 * torch.pi * x) + torch.tanh(10 * x)) * torch.sin(2 * torch.pi * y)
-
-def f(x, y, m=1, n=1, c=0.1, k=10):
-    term1 = (4 * torch.pi**2 * m**2 * c * torch.sin(2 * torch.pi * m * x) +
-             (2 * k**2 * torch.sinh(k * x) / torch.cosh(k * x)**3)) * torch.sin(2 * torch.pi * n * y)
-    term2 = 4 * torch.pi**2 * n**2 * (c * torch.sin(2 * torch.pi * m * x) + torch.tanh(k * x)) * torch.sin(2 * torch.pi * n * y)
-    return -(term1 + term2)
 
 
 # train the model
-vpinn = VPINN(f, u, type=0, Q=10, grid_num=10, boundary_num=80, test_fcn_num=5, device='cpu', isNew=True)
-net = vpinn.train("class_model", epoch_num=20000)
+vpinn = VPINN(f, u, [2, 10, 10, 10, 1],type=0, Q=10, grid_num=8, boundary_num=80, test_fcn_num=5, device='cpu', load=None)
+net = vpinn.train("Sine", epoch_num=10000)
 
 
 # plot and verify
@@ -37,10 +28,12 @@ fig.set_figwidth(13)
 fig.set_figheight(5)
 axes = ax.flatten()
 image1 = axes[0].imshow(prediction.detach().numpy())
+axes[0].set_title('Prediction')
 fig.colorbar(image1, ax=axes[0])
 image2 = axes[1].imshow(res.detach().numpy())
+axes[1].set_title('Residual')
 fig.colorbar(image2, ax=axes[1])
 fig.tight_layout()
 plt.savefig("prediction_and_residual.png")
-print(f'relative error={(torch.norm(res) / torch.norm(u(xx, yy))).item()}')
+print(f'relative error={(torch.norm(res) / torch.norm(u(xx, yy))).item() * 100:.2f}%')
 plt.show()

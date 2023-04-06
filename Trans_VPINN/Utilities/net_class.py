@@ -25,21 +25,15 @@ class MyLinearLayer(nn.Module):
     
 # Neural Network
 
-neuron_num = 7
 class MLP(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, layer_sizes):
         super(MLP, self).__init__()
-        self.net = torch.nn.Sequential(
-            MyLinearLayer(2, neuron_num),
-            torch.nn.Tanh(),
-            MyLinearLayer(neuron_num, neuron_num),
-            torch.nn.Tanh(),
-            MyLinearLayer(neuron_num, neuron_num),
-            torch.nn.Tanh(),
-            MyLinearLayer(neuron_num, neuron_num),
-            torch.nn.Tanh(),
-            MyLinearLayer(neuron_num, 1)
-        )
+        layers = []
+        for i in range(len(layer_sizes) - 1):
+            layers.append(MyLinearLayer(layer_sizes[i], layer_sizes[i + 1]))
+            if i < len(layer_sizes) - 2:  # 不在最后一层时添加激活函数
+                layers.append(nn.Tanh())
+        self.net = nn.Sequential(*layers)
         self.initialize_weights()
 
     def initialize_weights(self):

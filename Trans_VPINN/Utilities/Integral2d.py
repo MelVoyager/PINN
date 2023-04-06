@@ -1,9 +1,6 @@
-from GaussJacobiQuadRule_V3 import GaussLobattoJacobiWeights
-import basis
 import torch
-import lengendre
-from net_class import MLP
-import os, sys
+from .GaussJacobiQuadRule_V3 import GaussLobattoJacobiWeights
+from .net_class import MLP
 
 # os.chdir(sys.path[0])
 class Quad_Integral:
