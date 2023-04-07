@@ -1,18 +1,27 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.tri import Triangulation
+from copy import deepcopy
 import os, sys
 import torch
 os.chdir(sys.path[0])
 # 读取.dat文件中的数据
-data = np.loadtxt('poisson_boltzmann2d.dat', skiprows=9)
+data = np.loadtxt('burgers1d.dat', skiprows=8)
 
 # 提取x、y、u
-x = data[:, 0]
-y = data[:, 1]
-u = data[:, 2]
+x_ = data[:, 0]
+x = []
+t = []
+u = []
+for i in range(11):
+    x.append(deepcopy(x_))
+    t.append([i for _ in range(len(x_))])
+    u.append(data[:, i + 1])
 
-tri = Triangulation(x, y)
+x = np.concatenate(x)
+t = np.concatenate(t)
+u = np.concatenate(u)
+tri = Triangulation(x, t)
 
 # 绘制热力图
 plt.tripcolor(tri, u, cmap='hot', edgecolors='k')

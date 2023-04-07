@@ -59,8 +59,8 @@ optimizer = "adam"
 model = dde.Model(data, net)
 model.compile(optimizer, lr=1e-3)
 
-loss_history, train_state = model.train(10000, model_save_path="model/burgers")
-
+loss_history, train_state = model.train(10000, model_save_path="burgers")
+model.save('burgers.pth')
 # Inference
 x = torch.linspace(x_lower, x_upper, 100)
 t = torch.linspace(t_lower, t_upper, 100)

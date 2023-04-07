@@ -3,13 +3,13 @@ import torch
 import os, sys
 from VPINN2d import VPINN
 # import the f(rhs) and boundary condition, u is optional for plot
-from Function.Sine_1 import u, f, bc
+from Function.Poisson2d_1 import u, f, bc
 os.chdir(sys.path[0])
 
 # train the model
 vpinn = VPINN([2, 10, 10, 10, 1], f, bc(80), type=0, Q=10, grid_num=4, test_fcn_num=5, 
-            device='cpu', load=None)
-net = vpinn.train("Sine", epoch_num=20000)
+            device='cpu', load='Poisson[2, 10, 10, 10, 1](type=1,Q=20,grid_num=4,test_fcn=5,load=None,epoch=20000).pth')
+net = vpinn.train("Sine", epoch_num=0)
 
 
 # plot and verify
