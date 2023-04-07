@@ -24,7 +24,7 @@ def bc(boundary_num, device='cpu'):
     # sample on the circle
     circles = [(0.5, 0.5, 0.2), (0.4, -0.4, 0.4), (-0.2, -0.7, 0.1), (-0.6, 0.5, 0.3)]
     for index in range(len(circles)):
-        xx, yy = sample_points_on_circle(circles[index][0], circles[index][1], circles[index][2], boundary_num)
+        xx, yy = sample_points_on_circle(circles[index][0], circles[index][1], circles[index][2], int(boundary_num / 2))
         xx = xx.reshape(-1, 1).to(device).requires_grad_(True)
         yy = yy.reshape(-1, 1).to(device).requires_grad_(True)
         xs.append(xx)

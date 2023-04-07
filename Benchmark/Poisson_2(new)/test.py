@@ -9,9 +9,9 @@ os.chdir(sys.path[0])
 
 device = 'cpu'
 # train the model
-vpinn = VPINN([2, 15, 15, 15, 1], f, bc(80, device=device), type=0, Q=15, grid_num=24, test_fcn_num=8, 
-            device=device, load='Poisson_Boltzmann[2, 15, 15, 15, 1](type=0,Q=15,grid_num=24,test_fcn=8,load=None,epoch=10000).pth')
-# net = vpinn.train("Poisson_Boltzmann", epoch_num=10000, coef=0.01)
+vpinn = VPINN([2, 15, 15, 15, 1], f, bc(80, device=device), type=0, Q=10, grid_num=6, test_fcn_num=5, 
+            device=device, load='24grid.pth')
+# net = vpinn.train("Poisson_Boltzmann", epoch_num=10000, coef=1)
 net = vpinn.train(None, epoch_num=0, coef=10)
 
 
