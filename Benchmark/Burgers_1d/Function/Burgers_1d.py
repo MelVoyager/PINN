@@ -33,9 +33,9 @@ def bc(boundary_num, device='cpu'):
         ts[i].to(device).requires_grad_(True)
         us[i].to(device).requires_grad_(True)
     
-    boundary_xs = torch.cat(xs, dim=0)
-    boundary_ts = torch.cat(ts, dim=0)
-    boundary_us = torch.cat(us, dim=0)
+    boundary_xs = torch.cat(xs, dim=0).to(device)
+    boundary_ts = torch.cat(ts, dim=0).to(device)
+    boundary_us = torch.cat(us, dim=0).to(device)
     return (boundary_xs, boundary_ts, boundary_us)
     
     

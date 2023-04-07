@@ -3,6 +3,7 @@ import torch
 import os, sys
 from VPINN2d import VPINN
 import numpy as np
+# import pyinstrument
 from copy import deepcopy
 from matplotlib.tri import Triangulation
 os.chdir(sys.path[0])
@@ -11,14 +12,15 @@ os.chdir(sys.path[0])
 from Function.Burgers_1d import f, bc
 
 
-device = 'cpu'
+device = 'cuda'
 # train the model
-vpinn = VPINN([2, 20, 20, 20, 1], f, bc(100, device=device), type=0, Q=10, grid_num=16, test_fcn_num=6, 
+vpinn = VPINN([2, 20, 20, 20, 1], f, bc(100, device=device), type=0, Q=10, grid_num=32, test_fcn_num=6, 
             device=device, load=None)
-net = vpinn.train("burgers1d", epoch_num=10000, coef=0.001)
+# with pyinstrument.Profiler() as prof:
+net = vpinn.train("burgers1d", epoch_num=100, coef=0.0001)
 # net = vpinn.train(None, epoch_num=0, coef=10)
 
-
+# print(prof.output_text(unicode=True, color=True))
 # verify
 data = np.loadtxt('burgers1d.dat', skiprows=8)
 
@@ -75,7 +77,7 @@ fig.colorbar(image1, ax=axes[0])
 
 # image 2
 tri = Triangulation(x, t)
-res = (u_tensor - verify_tensor).reshape(-1).detach().numpy()
+res = (u_tensor - verify_tensor).to('cpu').reshape(-1).detach().numpy()
 image2 = axes[1].tripcolor(tri, res, cmap='hot', edgecolors='k')
 axes[1].set_title('Residual')
 fig.colorbar(image2, ax=axes[1])
