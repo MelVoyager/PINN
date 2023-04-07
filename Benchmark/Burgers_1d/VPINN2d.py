@@ -20,8 +20,7 @@ class VPINN:
         self.load = load
         if load:
             self.net = MLP(layer_sizes).to(device)
-            load_dict = torch.load('./model/'+load)
-            self.net.load_state_dict(load_dict)
+            self.net = torch.load('./model/'+load).to(device)
             # self.net = torch.load('./model/'+load)
             # new_net = MLP(layer_sizes).to(device)
             # new_net.load_state_dict()
@@ -36,7 +35,7 @@ class VPINN:
         for index in range(self.grid_num ** 2):
             x1, y1, x2, y2 = self.index2frame(index, self.grid_num)
             xx = (x.reshape(-1, 1).requires_grad_(True) + 1) / self.grid_num + x1
-            yy = ((y.reshape(-1, 1).requires_grad_(True) + 1) / self.grid_num + y1 / 2) + 0.5
+            yy = (y.reshape(-1, 1).requires_grad_(True) + 1) / (2 * self.grid_num) + y1
             xs.append(xx)
             ys.append(yy)
         xs = torch.cat(xs, dim=0).view(-1, 1)
@@ -56,9 +55,9 @@ class VPINN:
         j = index % grid_num
         grid_len = 2 / grid_num
         x1 = -1 + i * grid_len
-        y1 = -1 + j * grid_len
+        y1 = 0 + j * (grid_len / 2)
         x2 = -1 + (i + 1) * grid_len
-        y2 = -1 + (j + 1) * grid_len
+        y2 = 0 + (j + 1) * (grid_len / 2)
         return x1, y1, x2, y2
     
     def gradients(self, u, x, order=1):

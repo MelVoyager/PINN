@@ -15,7 +15,7 @@ t = []
 u = []
 for i in range(11):
     x.append(deepcopy(x_))
-    t.append([i for _ in range(len(x_))])
+    t.append([i * 0.1 for _ in range(len(x_))])
     u.append(data[:, i + 1])
 
 x = np.concatenate(x)
