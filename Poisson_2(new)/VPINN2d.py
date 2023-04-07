@@ -6,7 +6,7 @@ from Utilities.lengendre import test_func
 from net_class import MLP
 
 class VPINN:
-    def __init__(self, layer_sizes, f, bc, type=0, Q=10, grid_num=8, test_fcn_num=5, device='cpu', load=None):
+    def __init__(self, layer_sizes, f, bc, type=0, Q=10, grid_num=6, test_fcn_num=5, device='cpu', load=None):
         self.type =type
         self.f = f
         # self.u = u
@@ -135,7 +135,7 @@ class VPINN:
         return self.loss(int1, int2)
     
     def loss_interior_2(self):
-        int1 = -quad_integral.integral(self.DeltaWrapper) * ((1 / self.grid_num) ** 2)
+        int1 = -quad_integral.integral(lambda x, y: -self.DeltaWrapper(x, y) + 64 * self.uWrapper(x, y)) * ((1 / self.grid_num) ** 2)
         int2 = quad_integral.integral(self.fWrapper) * ((1 / self.grid_num) ** 2)
         # int3 = quad_integral.integral(self.LaplaceWrapper) * ((1 / self.grid_num) ** 2)
         return self.loss(int1, int2)

@@ -7,11 +7,12 @@ import numpy as np
 from Function.Poisson_Boltzmann_2d import f, bc, in_circle
 os.chdir(sys.path[0])
 
+device = 'cpu'
 # train the model
-vpinn = VPINN([2, 10, 10, 10, 1], f, bc(80), type=0, Q=10, grid_num=4, test_fcn_num=5, 
-            device='cpu', load=None)
-net = vpinn.train("Poisson_Boltzmann", epoch_num=10000, coef=10)
-# net = vpinn.train(None, epoch_num=0, coef=10)
+vpinn = VPINN([2, 15, 15, 15, 1], f, bc(80, device=device), type=0, Q=15, grid_num=24, test_fcn_num=8, 
+            device=device, load='Poisson_Boltzmann[2, 15, 15, 15, 1](type=0,Q=15,grid_num=24,test_fcn=8,load=None,epoch=10000).pth')
+# net = vpinn.train("Poisson_Boltzmann", epoch_num=10000, coef=0.01)
+net = vpinn.train(None, epoch_num=0, coef=10)
 
 
 # verify
@@ -22,21 +23,23 @@ x = data[:, 0]
 y = data[:, 1]
 u = data[:, 2]
 
-x_tensor = torch.from_numpy(x).reshape(-1, 1).type(torch.float)
-y_tensor = torch.from_numpy(y).reshape(-1, 1).type(torch.float)
-u_tensor = torch.from_numpy(u).reshape(-1, 1).type(torch.float)
+x_tensor = torch.from_numpy(x).reshape(-1, 1).type(torch.float).to(device)
+y_tensor = torch.from_numpy(y).reshape(-1, 1).type(torch.float).to(device)
+u_tensor = torch.from_numpy(u).reshape(-1, 1).type(torch.float).to(device)
 
 prediction = net(torch.cat([x_tensor, y_tensor], dim=1))
-print(f'mean error={torch.mean(torch.abs(u_tensor - prediction))}')
+print(f'median error={torch.median(torch.abs(u_tensor - prediction))}')
 print(f'relative error={torch.norm(u_tensor - prediction) / torch.norm(u_tensor) * 100:.2f}%')
 
 # plot and verify
 xc = torch.linspace(-1, 1, 500)
 xx, yy = torch.meshgrid(xc, xc, indexing='ij')
-xx = xx.reshape(-1, 1)
-yy = yy.reshape(-1, 1)
+xx = xx.reshape(-1, 1).to(device)
+yy = yy.reshape(-1, 1).to(device)
 xy = torch.cat([xx, yy], dim=1)
-prediction = net(xy)
+prediction = net(xy).to('cpu')
+xx = xx.to('cpu')
+yy = yy.to('cpu')
 for i in range(500 ** 2):
     if in_circle(xx[i],yy[i]):
         # xx[i] = 
