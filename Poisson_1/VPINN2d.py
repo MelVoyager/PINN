@@ -6,13 +6,13 @@ from Utilities.lengendre import test_func
 from net_class import MLP
 
 class VPINN:
-    def __init__(self, layer_sizes, f, u=None, type=0, Q=10, grid_num=8, boundary_num=80, test_fcn_num=5, device='cpu', load=None):
+    def __init__(self, layer_sizes, f, bc, type=0, Q=10, grid_num=8, test_fcn_num=5, device='cpu', load=None):
         self.type =type
         self.f = f
-        self.u = u
+        # self.u = u
+        self.bc = bc
         self.Q = Q
         self.grid_num = grid_num
-        self.boundary_num = boundary_num
         self.test_fcn_num = test_fcn_num
         self.loss = torch.nn.MSELoss()
         self.device = device
@@ -39,27 +39,12 @@ class VPINN:
         self.grid_xs = xs
         self.grid_ys = ys
         
-        xs = []
-        ys = []
-        
-        # boundary condition
-        x1, y1, x2, y2 = (-1, -1, 1, 1)
-        x_r = torch.linspace(x2, x2, self.boundary_num).reshape(-1, 1).to(self.device).requires_grad_(True)
-        y_r = torch.linspace(y1, y2, self.boundary_num).reshape(-1, 1).to(self.device).requires_grad_(True)
-        
-        x_u = torch.linspace(x1, x2, self.boundary_num).reshape(-1, 1).to(self.device).requires_grad_(True)
-        y_u = torch.linspace(y2, y2, self.boundary_num).reshape(-1, 1).to(self.device).requires_grad_(True)
-            
-        x_l = torch.linspace(x1, x1, self.boundary_num).reshape(-1, 1).to(self.device).requires_grad_(True)
-        y_l = torch.linspace(y1, y2, self.boundary_num).reshape(-1, 1).to(self.device).requires_grad_(True)
-            
-        x_d = torch.linspace(x1, x2, self.boundary_num).reshape(-1, 1).to(self.device).requires_grad_(True)
-        y_d = torch.linspace(y1, y1, self.boundary_num).reshape(-1, 1).to(self.device).requires_grad_(True)
-            
-        xs.extend([x_r, x_u, x_l, x_d])
-        ys.extend([y_r, y_u, y_l, y_d])
-        self.boundary_xs = torch.cat(xs, dim=0)
-        self.boundary_ys = torch.cat(ys, dim=0)
+        self.boundary_xs = bc[0]
+        self.boundary_ys = bc[1]
+        self.boundary_us = bc[2]
+        test_func.init(self.test_fcn_num)
+        self.test_fcn0 = test_func.test_func(0, x, y)
+        self.test_fcn1 = test_func.test_func(1, x, y)
         
     def index2frame(self, index, grid_num):
         i = index // grid_num
@@ -86,7 +71,7 @@ class VPINN:
         laplace_u = d2x + d2y
         
         result = torch.einsum('mc,nc->mnc', \
-            laplace_u.view(self.grid_num ** 2, self.Q ** 2), test_func.test_func(0, x, y).view(self.test_fcn_num ** 2, self.Q ** 2))
+            laplace_u.view(self.grid_num ** 2, self.Q ** 2), self.test_fcn0.view(self.test_fcn_num ** 2, self.Q ** 2))
         
         result = torch.reshape(result, (-1, self.Q ** 2))
         # result = laplace_u.view(self.grid_num ** 2, self.Q ** 2) \
@@ -96,7 +81,7 @@ class VPINN:
     def fWrapper(self, x, y):
         f = self.f(self.grid_xs, self.grid_ys)
         result = torch.einsum('mc,nc->mnc', \
-            f.view(self.grid_num ** 2, self.Q ** 2), test_func.test_func(0, x, y).view(self.test_fcn_num ** 2, self.Q ** 2))
+            f.view(self.grid_num ** 2, self.Q ** 2), self.test_fcn0.view(self.test_fcn_num ** 2, self.Q ** 2))
         result = torch.reshape(result, (-1, self.Q ** 2))
         # result = f.view(self.grid_num ** 2, self.Q ** 2) * test_func.test_func(0, x, y)
         return result
@@ -114,7 +99,7 @@ class VPINN:
         du = torch.cat([dx, dy], dim=1) * self.grid_num
         
         du = du.view(self.grid_num ** 2, self.Q ** 2, 2)
-        dv = (test_func.test_func(1, x, y)).view(self.test_fcn_num ** 2, self.Q ** 2, 2)
+        dv = self.test_fcn1.view(self.test_fcn_num ** 2, self.Q ** 2, 2)
         
         du = du.unsqueeze(1).expand(-1, self.test_fcn_num ** 2, -1, -1)
         dv = dv.unsqueeze(0).expand(self.grid_num ** 2, -1, -1, -1)
@@ -127,7 +112,7 @@ class VPINN:
 
     def loss_bc(self):
         prediction = self.net(torch.cat([self.boundary_xs, self.boundary_ys], dim=1))
-        solution = self.u(self.boundary_xs, self.boundary_ys)
+        solution = self.boundary_us
         return self.loss(prediction, solution)
         
     def loss_interior_1(self):
@@ -150,7 +135,10 @@ class VPINN:
     
     def train(self, model_name, epoch_num=10000, coef=10):
         optimizer = torch.optim.Adam(params=self.net.parameters())
-        test_func.init(self.test_fcn_num)
+        
+        if self.type!=0 and self.type!=1:
+            print('Invaild type')
+            return None
         
         if self.type == 0:
             for i in tqdm(range(epoch_num)):
@@ -171,6 +159,6 @@ class VPINN:
                 optimizer.step()
         
         torch.save(self.net, './model/'+model_name+f'{self.layer_sizes}'+f'(type={self.type}'+f',Q={self.Q}'+f',grid_num={self.grid_num}'+\
-            f',boundary_num={self.boundary_num}'+f',test_fcn={self.test_fcn_num}'+f',load={self.load}'+f',epoch={epoch_num})'+'.pth')
+            f',test_fcn={self.test_fcn_num}'+f',load={self.load}'+f',epoch={epoch_num})'+'.pth')
         return self.net
         

@@ -2,18 +2,14 @@ import matplotlib.pyplot as plt
 import torch
 import os, sys
 from VPINN2d import VPINN
-from Function.Poisson2d_1 import u, f
+# import the f(rhs) and boundary condition, u is optional for plot
+from Function.Sine_1 import u, f, bc
 os.chdir(sys.path[0])
 
-# define the pde in the form of N(u,\lambda)=f
-
-
 # train the model
-# vpinn = VPINN([2, 10, 10, 10, 1], f, u, type=1, Q=100, grid_num=4, boundary_num=80, test_fcn_num=5, 
-#             device='cpu', load='Sine[2, 10, 10, 10, 1](type=0,Q=10,grid_num=8,boundary_num=80,test_fcn=5).pth')
-vpinn = VPINN([2, 10, 10, 10, 1], f, u, type=1, Q=50, grid_num=4, boundary_num=80, test_fcn_num=5, 
+vpinn = VPINN([2, 10, 10, 10, 1], f, bc(80), type=0, Q=10, grid_num=4, test_fcn_num=5, 
             device='cpu', load=None)
-net = vpinn.train("Poisson", epoch_num=10000)
+net = vpinn.train("Sine", epoch_num=20000)
 
 
 # plot and verify
