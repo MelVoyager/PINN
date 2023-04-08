@@ -7,12 +7,12 @@ import numpy as np
 from Function.Poisson_Boltzmann_2d import f, bc, in_circle
 os.chdir(sys.path[0])
 
-device = 'cpu'
+device = 'cuda'
 # train the model
 vpinn = VPINN([2, 15, 15, 15, 1], f, bc(80, device=device), type=0, Q=10, grid_num=6, test_fcn_num=5, 
-            device=device, load='24grid.pth')
-# net = vpinn.train("Poisson_Boltzmann", epoch_num=10000, coef=1)
-net = vpinn.train(None, epoch_num=0, coef=10)
+            device=device, load=None)
+net = vpinn.train("Poisson_Boltzmann", epoch_num=10000, coef=1)
+# net = vpinn.train(None, epoch_num=0, coef=10)
 
 
 # verify

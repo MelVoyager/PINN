@@ -68,7 +68,7 @@ class VPINN:
         u = self.net(torch.cat([self.grid_xs, self.grid_ys], dim=1))
         d2x = self.gradients(u, self.grid_xs, 2)
         d2y = self.gradients(u, self.grid_ys, 2)
-        laplace_u = d2x + d2y
+        laplace_u = -(d2x + d2y) + 64 * u
         
         result = torch.einsum('mc,nc->mnc', \
             laplace_u.view(self.grid_num ** 2, self.Q ** 2), self.test_fcn0.view(self.test_fcn_num ** 2, self.Q ** 2))
@@ -123,7 +123,7 @@ class VPINN:
         return self.loss(prediction, solution)
         
     def loss_interior_1(self):
-        int1 = quad_integral.integral(lambda x, y: -self.LaplaceWrapper(x, y) + 64 * self.uWrapper(x, y)) * ((1 / self.grid_num) ** 2)
+        int1 = quad_integral.integral(self.LaplaceWrapper) * ((1 / self.grid_num) ** 2)
         int2 = quad_integral.integral(self.fWrapper) * ((1 / self.grid_num) ** 2)
         # int3 = quad_integral.integral(ext_LaplaceWrapper, k1, k2, index) * ((1 /grid_num) ** 2)
         # err1 = torch.abs(f - laplace_u)
