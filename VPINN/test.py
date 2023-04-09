@@ -16,10 +16,12 @@ def f(x, y, m=1, n=1, c=0.1, k=10):
     return -(term1 + term2)
 
 def pde(x, y, u):
-    return VPINN.LAPLACE_TERM(5 * (5 + (VPINN.laplace(x, y, u)))) - 5 * f(x, y) - 25
+    # VPINN.laplace represents the result of laplace operator applied to u with Green Theorem
+    # When VPINN.laplace is used, you are expected to wrap the monomial with VPINN.LAPLACE_TERM() to distinguish
+    # VPINN.LAPLACE_TERM can only contain a monomial of VPINN.laplace, polynomial is not allowed
+    
+    return VPINN.LAPLACE_TERM(5 * (5 + (VPINN.laplace(x, y, u)))) - 5 * f(x, y)
 
-def transform(x):
-    return x
 
 # boundary condition
 def bc(boundary_num, device='cpu'):
@@ -48,27 +50,10 @@ def bc(boundary_num, device='cpu'):
 
 device = 'cpu'
 # train the model
-vpinn = VPINN([2, 15, 15, 15, 1], pde, bc(80, device=device), Q=30, grid_num=6, test_fcn_num=5, 
-            device=device, load=None)
+vpinn = VPINN([2, 15, 15, 15, 1], pde, bc(80, device=device), Q=20, grid_num=6, test_fcn_num=5, 
+            device=device, load='Poisson[2, 15, 15, 15, 1],Q=20,grid_num=6,test_fcn=5,load=None,epoch=10000).pth')
 net = vpinn.train("Poisson", epoch_num=10000, coef=10)
-net = vpinn.train(None, epoch_num=0, coef=10)
-
-
-# verify
-# data = np.loadtxt('poisson_boltzmann2d.dat', skiprows=9)
-
-# # get x、y、u of solution
-# x = data[:, 0]
-# y = data[:, 1]
-# u = data[:, 2]
-
-# x_tensor = torch.from_numpy(x).reshape(-1, 1).type(torch.float).to(device)
-# y_tensor = torch.from_numpy(y).reshape(-1, 1).type(torch.float).to(device)
-# u_tensor = torch.from_numpy(u).reshape(-1, 1).type(torch.float).to(device)
-
-# prediction = net(torch.cat([x_tensor, y_tensor], dim=1))
-# print(f'median error={torch.median(torch.abs(u_tensor - prediction))}')
-# print(f'relative error={torch.norm(u_tensor - prediction) / torch.norm(u_tensor) * 100:.2f}%')
+# net = vpinn.train(None, epoch_num=0, coef=10)
 
 # plot and verify
 xc = torch.linspace(-1, 1, 500)

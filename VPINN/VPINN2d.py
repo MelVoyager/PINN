@@ -143,9 +143,9 @@ class VPINN:
         if self.calls_laplace == False:
             int1 = quad_integral.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
         else:
-            laplace_conponent = self.pde1(None, None, None) * ((1 / self.grid_num) ** 2)
-            rest = quad_integral.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
-            int1 = laplace_conponent + rest
+            laplace_conponent = self.pde1(None, None, None) 
+            rest = quad_integral.integral(self.lhsWrapper)
+            int1 = (laplace_conponent + rest) * ((1 / self.grid_num) ** 2)
         
         int2 = torch.zeros_like(int1).requires_grad_(True)
         
