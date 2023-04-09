@@ -30,17 +30,17 @@ def bc(boundary_num, device='cpu'):
     xs = []
     ys = []
     x1, y1, x2, y2 = (-1, -1, 1, 1)
-    x_r = torch.linspace(x2, x2, boundary_num).reshape(-1, 1).to(device).requires_grad_(True)
-    y_r = torch.linspace(y1, y2, boundary_num).reshape(-1, 1).to(device).requires_grad_(True)
+    x_r = torch.linspace(x2, x2, boundary_num).reshape(-1, 1)
+    y_r = torch.linspace(y1, y2, boundary_num).reshape(-1, 1)
             
-    x_u = torch.linspace(x1, x2, boundary_num).reshape(-1, 1).to(device).requires_grad_(True)
-    y_u = torch.linspace(y2, y2, boundary_num).reshape(-1, 1).to(device).requires_grad_(True)
+    x_u = torch.linspace(x1, x2, boundary_num).reshape(-1, 1)
+    y_u = torch.linspace(y2, y2, boundary_num).reshape(-1, 1)
                 
-    x_l = torch.linspace(x1, x1, boundary_num).reshape(-1, 1).to(device).requires_grad_(True)
-    y_l = torch.linspace(y1, y2, boundary_num).reshape(-1, 1).to(device).requires_grad_(True)
+    x_l = torch.linspace(x1, x1, boundary_num).reshape(-1, 1)
+    y_l = torch.linspace(y1, y2, boundary_num).reshape(-1, 1)
                 
-    x_d = torch.linspace(x1, x2, boundary_num).reshape(-1, 1).to(device).requires_grad_(True)
-    y_d = torch.linspace(y1, y1, boundary_num).reshape(-1, 1).to(device).requires_grad_(True)
+    x_d = torch.linspace(x1, x2, boundary_num).reshape(-1, 1)
+    y_d = torch.linspace(y1, y1, boundary_num).reshape(-1, 1)
                 
     xs.extend([x_r, x_u, x_l, x_d])
     ys.extend([y_r, y_u, y_l, y_d])

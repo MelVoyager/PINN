@@ -42,9 +42,9 @@ class VPINN:
         self.grid_ys = ys
         
         # pass the boundary sample pointf from arguments
-        self.boundary_xs = bc[0].requires_grad_(True)
-        self.boundary_ys = bc[1].requires_grad_(True)
-        self.boundary_us = bc[2].requires_grad_(True)
+        self.boundary_xs = bc[0].requires_grad_(True).to(device)
+        self.boundary_ys = bc[1].requires_grad_(True).to(device)
+        self.boundary_us = bc[2].requires_grad_(True).to(device)
         
         # define the test functions
         test_func.init(self.test_fcn_num)
@@ -56,7 +56,6 @@ class VPINN:
         
          
         laplace_term_pattern = r'\bLAPLACE_TERM\(((?:[^()]|\((?1)\))*)\)'
-        # r'LAPLACE_TERM\(([^"]*)\)'
         
         laplace_term = re.search(laplace_term_pattern, source_code)
         calls_laplace = bool(laplace_term)

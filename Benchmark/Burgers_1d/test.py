@@ -12,7 +12,7 @@ os.chdir(sys.path[0])
 from Function.Burgers_1d import f, bc
 
 
-device = 'cuda'
+device = 'cpu'
 # train the model
 vpinn = VPINN([2, 20, 20, 20, 1], f, bc(100, device=device), type=0, Q=10, grid_num=32, test_fcn_num=6, 
             device=device, load=None)
