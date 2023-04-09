@@ -1,12 +1,11 @@
 import torch
-import net_class
 import functools
 import inspect
 import regex as re
 from tqdm import tqdm
-from Utilities.Integral2d import quad_integral
-from Utilities.lengendre import test_func
-from net_class import MLP
+from .Integral2d import quad_integral
+from .lengendre import test_func
+from .net_class import MLP
 
 
 class VPINN:
@@ -73,10 +72,6 @@ class VPINN:
     def extract_laplace_term(self, func, laplace_term):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            func_args = inspect.signature(func).bind(*args, **kwargs).arguments
-            x = func_args["x"]
-            y = func_args["y"]
-            u = func_args["u"]
             return eval(laplace_term.replace('VPINN.laplace(x, y, u)', 'quad_integral.integral(self.Laplace)'), globals(), {'self': self})
         return wrapper
 
@@ -153,7 +148,6 @@ class VPINN:
     
     def train(self, model_name, epoch_num=10000, coef=10):
         optimizer = torch.optim.Adam(params=self.net.parameters())
-        
         
         for i in tqdm(range(epoch_num)):
             optimizer.zero_grad()

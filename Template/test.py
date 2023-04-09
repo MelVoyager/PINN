@@ -1,9 +1,6 @@
 import matplotlib.pyplot as plt
 import torch
-import os, sys
-from VPINN2d import VPINN
-import numpy as np
-os.chdir(sys.path[0])
+from src.VPINN2d import VPINN
 
 # define the pde and boundary condition
 def u(x, y):
@@ -15,13 +12,16 @@ def f(x, y, m=1, n=1, c=0.1, k=10):
     term2 = 4 * torch.pi**2 * n**2 * (c * torch.sin(2 * torch.pi * m * x) + torch.tanh(k * x)) * torch.sin(2 * torch.pi * n * y)
     return -(term1 + term2)
 
-def pde(x, y, u):
-    # VPINN.laplace represents the result of laplace operator applied to u with Green Theorem
-    # When VPINN.laplace is used, you are expected to wrap the monomial with VPINN.LAPLACE_TERM() to distinguish
-    # VPINN.LAPLACE_TERM can only contain a monomial of VPINN.laplace, polynomial is not allowed
-    
-    return VPINN.LAPLACE_TERM(5 * (5 + (VPINN.laplace(x, y, u)))) - 5 * f(x, y)
+# VPINN.laplace represents the result of laplace operator applied to u with Green Theorem
+# When VPINN.laplace is used, you are expected to wrap the monomial with VPINN.LAPLACE_TERM() to distinguish
+# VPINN.LAPLACE_TERM can only contain a monomial of VPINN.laplace, polynomial is not allowed
 
+# def pde(x, y, u):    
+    # return VPINN.LAPLACE_TERM(VPINN.laplace(x, y, u)) - f(x, y)
+
+# this pde doesn't use the green theorem to simplify the equation
+def pde(x, y, u):    
+    return VPINN.gradients(u, x, 2) + VPINN.gradients(u, y, 2) - f(x, y)
 
 # boundary condition
 def bc(boundary_num, device='cpu'):
@@ -51,7 +51,7 @@ def bc(boundary_num, device='cpu'):
 device = 'cpu'
 # train the model
 vpinn = VPINN([2, 15, 15, 15, 1], pde, bc(80, device=device), Q=20, grid_num=6, test_fcn_num=5, 
-            device=device, load='Poisson[2, 15, 15, 15, 1],Q=20,grid_num=6,test_fcn=5,load=None,epoch=10000).pth')
+            device=device, load=None)
 net = vpinn.train("Poisson", epoch_num=10000, coef=10)
 # net = vpinn.train(None, epoch_num=0, coef=10)
 
