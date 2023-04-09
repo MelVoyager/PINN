@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import torch
 from src.VPINN2d import VPINN
 
-# define the pde and boundary condition
+#############################################################################################
+# define the pde
 def u(x, y):
     return (0.1 * torch.sin(2 * torch.pi * x) + torch.tanh(10 * x)) * torch.sin(2 * torch.pi * y)
 
@@ -16,13 +17,14 @@ def f(x, y, m=1, n=1, c=0.1, k=10):
 # When VPINN.laplace is used, you are expected to wrap the monomial with VPINN.LAPLACE_TERM() to distinguish
 # VPINN.LAPLACE_TERM can only contain a monomial of VPINN.laplace, polynomial is not allowed
 
-# def pde(x, y, u):    
-    # return VPINN.LAPLACE_TERM(VPINN.laplace(x, y, u)) - f(x, y)
+def pde(x, y, u):    
+    return VPINN.LAPLACE_TERM(VPINN.laplace(x, y, u)) - f(x, y)
 
 # this pde doesn't use the green theorem to simplify the equation
-def pde(x, y, u):    
-    return VPINN.gradients(u, x, 2) + VPINN.gradients(u, y, 2) - f(x, y)
+# def pde(x, y, u):    
+    # return VPINN.gradients(u, x, 2) + VPINN.gradients(u, y, 2) - f(x, y)
 
+#############################################################################################
 # boundary condition
 def bc(boundary_num, device='cpu'):
     xs = []
@@ -47,14 +49,16 @@ def bc(boundary_num, device='cpu'):
     boundary_us = u(boundary_xs, boundary_ys)
     return (boundary_xs, boundary_ys, boundary_us)
 
-
-device = 'cpu'
+#############################################################################################
 # train the model
-vpinn = VPINN([2, 15, 15, 15, 1], pde, bc(80, device=device), Q=20, grid_num=6, test_fcn_num=5, 
+device = 'cpu'
+vpinn = VPINN([2, 15, 15, 15, 1], pde, bc(80, device=device), Q=10, grid_num=6, test_fcn_num=5, 
             device=device, load=None)
-net = vpinn.train("Poisson", epoch_num=10000, coef=10)
-# net = vpinn.train(None, epoch_num=0, coef=10)
 
+
+net = vpinn.train("Poisson", epoch_num=10000, coef=10)
+
+#############################################################################################
 # plot and verify
 xc = torch.linspace(-1, 1, 500)
 xx, yy = torch.meshgrid(xc, xc, indexing='ij')
@@ -71,3 +75,4 @@ plt.imshow(prediction.detach().numpy(), cmap='hot', origin='lower')
 plt.colorbar()
 plt.savefig('prediction')
 plt.show()
+

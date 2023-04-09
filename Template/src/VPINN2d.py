@@ -31,7 +31,7 @@ class VPINN:
         x = quad_integral.XX
         y = quad_integral.YY
         for index in range(self.grid_num ** 2):
-            x1, y1, x2, y2 = self.index2frame(index, self.grid_num)
+            x1, y1, x2, y2 = self.__index2frame(index, self.grid_num)
             xx = (x.reshape(-1, 1).requires_grad_(True) + 1) / self.grid_num + x1
             yy = (y.reshape(-1, 1).requires_grad_(True) + 1) / self.grid_num + y1
             xs.append(xx)
@@ -63,19 +63,19 @@ class VPINN:
         self.calls_laplace = calls_laplace
 
         if calls_laplace:
-            self.pde1 = self.extract_laplace_term(pde, laplace_term.group(1).strip())
+            self.pde1 = self.__extract_laplace_term(pde, laplace_term.group(1).strip())
             self.pde = pde
         else:
             self.pde = pde
             self.pde1 = None
 
-    def extract_laplace_term(self, func, laplace_term):
+    def __extract_laplace_term(self, func, laplace_term):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             return eval(laplace_term.replace('VPINN.laplace(x, y, u)', 'quad_integral.integral(self.Laplace)'), globals(), {'self': self})
         return wrapper
 
-    def index2frame(self, index, grid_num):
+    def __index2frame(self, index, grid_num):
         i = index // grid_num
         j = index % grid_num
         grid_len = 2 / grid_num
@@ -119,7 +119,7 @@ class VPINN:
         result = result.view(-1, self.Q ** 2)
         return -result
 
-    def lhsWrapper(self, x=None, y=None, u_in=None):
+    def __lhsWrapper(self, x=None, y=None, u_in=None):
         u = self.net(torch.cat([self.grid_xs, self.grid_ys], dim=1))
         
         lhs = self.pde(self.grid_xs, self.grid_ys, u)
@@ -129,17 +129,17 @@ class VPINN:
         result = torch.reshape(result, (-1, self.Q ** 2))
         return result
     
-    def loss_bc(self):
+    def __loss_bc(self):
         prediction = self.net(torch.cat([self.boundary_xs, self.boundary_ys], dim=1))
         solution = self.boundary_us
         return self.loss(prediction, solution)
         
-    def loss_interior(self):
+    def __loss_interior(self):
         if self.calls_laplace == False:
-            int1 = quad_integral.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
+            int1 = quad_integral.integral(self.__lhsWrapper) * ((1 / self.grid_num) ** 2)
         else:
             laplace_conponent = self.pde1(None, None, None) 
-            rest = quad_integral.integral(self.lhsWrapper)
+            rest = quad_integral.integral(self.__lhsWrapper)
             int1 = (laplace_conponent + rest) * ((1 / self.grid_num) ** 2)
         
         int2 = torch.zeros_like(int1).requires_grad_(True)
@@ -151,9 +151,9 @@ class VPINN:
         
         for i in tqdm(range(epoch_num)):
             optimizer.zero_grad()
-            loss = self.loss_interior() + coef * self.loss_bc()
+            loss = self.__loss_interior() + coef * self.__loss_bc()
             if i % 100 == 0:
-                print(f'loss_interior={self.loss_interior().item():.5g}, loss_bc={self.loss_bc().item():.5g}')
+                print(f'loss_interior={self.__loss_interior().item():.5g}, loss_bc={self.__loss_bc().item():.5g}')
             loss.backward(retain_graph=True)
             optimizer.step()
         
