@@ -1,6 +1,6 @@
 import torch
 import net_class
-import sys
+import functools
 import inspect
 import re
 from tqdm import tqdm
@@ -10,7 +10,7 @@ from net_class import MLP
 
 
 class VPINN:
-    def __init__(self, layer_sizes, pde, bc, transformer=None, Q=10, grid_num=6, test_fcn_num=5, device='cpu', load=None):
+    def __init__(self, layer_sizes, pde, bc, Q=10, grid_num=6, test_fcn_num=5, device='cpu', load=None):
         self.pde = pde
         self.bc = bc
         self.Q = Q
@@ -55,35 +55,27 @@ class VPINN:
         
         # check whether the laplace function is used
         source_code = inspect.getsource(pde)
-        self.calls_laplace = bool(re.search(r'\bVPINN.laplace\b', source_code))
-        if(self.calls_laplace):
-            if(transformer is None):
-                print('When laplace is used, you are expected to pass the argument of tranformer to show how the laplace conponent is tranformed')
-                sys.exit()
-        
-        # if calls_laplace:
-        #     # pde1仅含laplace项
-        #     self.pde1 = self.replace_laplace_with_self_and_dummy(pde, True)
-        #     # pde2含除laplace之外的其他项
-        #     self.pde2 = self.replace_laplace_with_self_and_dummy(pde, False)
-        #     self.pde = pde
-        # else:
-        #     self.pde = pde
-        #     self.pde1 = None
-        #     self.pde2 = None
+        laplace_term_pattern = r'([-+]? *[\w.]* *\*? *VPINN.laplace\([^)]*\) *(?:\*\* *[\w.]*)?)'
+        laplace_term = re.search(laplace_term_pattern, source_code)
+        calls_laplace = bool(laplace_term)
+        self.calls_laplace = calls_laplace
 
-    # def replace_laplace_with_self_and_dummy(self, func, is_pde1):
-    #     @functools.wraps(func)
-    #     def wrapper(*args, **kwargs):
-    #         original_laplace = VPINN.laplace
-    #         VPINN.laplace = self.Laplace
-    #         result_with_self = func(*args, **kwargs)
-    #         VPINN.laplace = lambda x: 0
-    #         result_with_dummy = func(*args, **kwargs)
-    #         VPINN.laplace = original_laplace
+        if calls_laplace:
+            self.pde1 = self.extract_laplace_term(pde, laplace_term.group(1).strip())
+            self.pde = pde
+        else:
+            self.pde = pde
+            self.pde1 = None
 
-    #         return result_with_self - result_with_dummy if is_pde1 else result_with_dummy
-    #     return wrapper
+    def extract_laplace_term(self, func, laplace_term):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            func_args = inspect.signature(func).bind(*args, **kwargs).arguments
+            x = func_args["x"]
+            y = func_args["y"]
+            u = func_args["u"]
+            return eval(laplace_term.replace('VPINN.laplace(x, y, u)', 'self.Laplace(x_, y_, u_)'), globals(), {'x_': x, 'y_': y, 'u_': u, 'self': self})
+        return wrapper
 
     def index2frame(self, index, grid_num):
         i = index // grid_num
@@ -109,7 +101,7 @@ class VPINN:
         else:
             return VPINN.gradients(VPINN.gradients(u, x), x, order=order - 1)
     
-    def Laplace(self):
+    def Laplace(self, x_=None, y_=None, u_=None):
         u = self.net(torch.cat([self.grid_xs, self.grid_ys], dim=1))
         dx = VPINN.gradients(u, self.grid_xs, 1)
         dy = VPINN.gradients(u, self.grid_ys, 1)
@@ -123,17 +115,12 @@ class VPINN:
         
         result = torch.sum(du * dv, dim=-1)
         result = result.view(-1, self.Q ** 2)
-        # result = torch.bmm(du.view(-1, 1, self.Q ** 2, 2), dv.view(1, -1, self.Q ** 2, 2)).view(-1, self.Q ** 2, 2)
-        # result = (du * dv).sum(dim=-1)
-        return result
+        return -result
 
     def lhsWrapper(self, x=None, y=None, u_in=None):
         u = self.net(torch.cat([self.grid_xs, self.grid_ys], dim=1))
         
-        # if self.calls_laplace == False:
         lhs = self.pde(self.grid_xs, self.grid_ys, u)
-        # else:
-            # lhs = self.pde2(self.grid_xs, self.grid_ys, u)
         
         result = torch.einsum('mc,nc->mnc', \
             lhs.view(self.grid_num ** 2, self.Q ** 2), self.test_fcn0.view(self.test_fcn_num ** 2, self.Q ** 2))
@@ -149,19 +136,13 @@ class VPINN:
         if self.calls_laplace == False:
             int1 = quad_integral.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
         else:
-            laplace_conponent = quad_integral.integral(self.Laplace) * ((1 / self.grid_num) ** 2)
+            laplace_conponent = quad_integral.integral(self.pde1) * ((1 / self.grid_num) ** 2)
             rest = quad_integral.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
             int1 = laplace_conponent + rest
         
         int2 = torch.zeros_like(int1).requires_grad_(True)
         
         return self.loss(int1, int2)
-    
-    # def loss_interior_2(self):
-    #     int1 = -quad_integral.integral(lambda x, y: -self.DeltaWrapper(x, y) + 64 * self.uWrapper(x, y)) * ((1 / self.grid_num) ** 2)
-    #     int2 = quad_integral.integral(self.fWrapper) * ((1 / self.grid_num) ** 2)
-    #     # int3 = quad_integral.integral(self.LaplaceWrapper) * ((1 / self.grid_num) ** 2)
-    #     return self.loss(int1, int2)
     
     def train(self, model_name, epoch_num=10000, coef=10):
         optimizer = torch.optim.Adam(params=self.net.parameters())
@@ -180,46 +161,3 @@ class VPINN:
                 f',test_fcn={self.test_fcn_num}'+f',load={self.load}'+f',epoch={epoch_num})'+'.pth')
         return self.net
         
-
-    # def LaplaceWrapper(self):
-    #     u = self.net(torch.cat([self.grid_xs, self.grid_ys], dim=1))
-    #     d2x = VPINN.gradients(u, self.grid_xs, 2)
-    #     d2y = VPINN.gradients(u, self.grid_ys, 2)
-    #     laplace_u = d2x + d2y
-        
-    #     result = torch.einsum('mc,nc->mnc', \
-    #         laplace_u.view(self.grid_num ** 2, self.Q ** 2), self.test_fcn0.view(self.test_fcn_num ** 2, self.Q ** 2))
-        
-    #     result = torch.reshape(result, (-1, self.Q ** 2))
-    #     # result = laplace_u.view(self.grid_num ** 2, self.Q ** 2) \
-    #     #         * test_func.test_func(0, x, y)
-    #     return result
-    
-    # def fWrapper(self):
-    #     f = self.f(self.grid_xs, self.grid_ys)
-    #     result = torch.einsum('mc,nc->mnc', \
-    #         f.view(self.grid_num ** 2, self.Q ** 2), self.test_fcn0.view(self.test_fcn_num ** 2, self.Q ** 2))
-    #     result = torch.reshape(result, (-1, self.Q ** 2))
-    #     # result = f.view(self.grid_num ** 2, self.Q ** 2) * test_func.test_func(0, x, y)
-    #     return result
-    
-    # def uWrapper(self):
-    #     u = self.net(torch.cat([self.grid_xs, self.grid_ys], dim=1))
-    #     result = torch.einsum('mc,nc->mnc', \
-    #         u.view(self.grid_num ** 2, self.Q ** 2), self.test_fcn0.view(self.test_fcn_num ** 2, self.Q ** 2))
-    #     result = torch.reshape(result, (-1, self.Q ** 2))
-    #     return result
-    
-    # def gradient_u(self, x, y):
-    #     du_dx = torch.tensor(0.5 * torch.pi * torch.cos(0.5 * torch.pi * (x + 1)) * torch.sin(0.5 * torch.pi * (y + 1)))
-    #     du_dy = torch.tensor(torch.sin(0.5 * torch.pi * (x + 1)) * 0.5 * torch.pi * torch.cos(0.5 * torch.pi * (y + 1)))
-    #     return du_dx, du_dy
-    
-            # if self.type == 1:
-        #     for i in tqdm(range(epoch_num)):
-        #         optimizer.zero_grad()
-        #         loss = self.loss_interior_2() + coef * self.loss_bc()
-        #         if i % 100 == 0:
-        #             print(f'loss_interior={self.loss_interior_2().item():.5g}, loss_bc={self.loss_bc().item():.5g}')
-        #         loss.backward(retain_graph=True)
-        #         optimizer.step()

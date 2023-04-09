@@ -17,7 +17,7 @@ def f(x, y, m=1, n=1, c=0.1, k=10):
     return -(term1 + term2)
 
 def pde(x, y, u):
-    return VPINN.laplace(x, y, u) - f(x, y)
+    return 5 * VPINN.laplace(x, y, u) - 5 * f(x, y)
 
 def transform(x):
     return x
