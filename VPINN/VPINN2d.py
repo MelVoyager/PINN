@@ -2,7 +2,7 @@ import torch
 import net_class
 import functools
 import inspect
-import re
+import regex as re
 from tqdm import tqdm
 from Utilities.Integral2d import quad_integral
 from Utilities.lengendre import test_func
@@ -21,7 +21,6 @@ class VPINN:
         self.layer_sizes = layer_sizes
         self.load = load
         if load:
-            # self.net = MLP(layer_sizes).to(device)
             self.net = torch.load('./model/'+load).to(device)
         else:
             self.net = MLP(layer_sizes).to(device)
@@ -55,7 +54,11 @@ class VPINN:
         
         # check whether the laplace function is used
         source_code = inspect.getsource(pde)
-        laplace_term_pattern = r'([-+]? *[\w.]* *\*? *VPINN.laplace\([^)]*\) *(?:\*\* *[\w.]*)?)'
+        
+         
+        laplace_term_pattern = r'\bLAPLACE_TERM\(((?:[^()]|\((?1)\))*)\)'
+        # r'LAPLACE_TERM\(([^"]*)\)'
+        
         laplace_term = re.search(laplace_term_pattern, source_code)
         calls_laplace = bool(laplace_term)
         self.calls_laplace = calls_laplace
@@ -74,7 +77,7 @@ class VPINN:
             x = func_args["x"]
             y = func_args["y"]
             u = func_args["u"]
-            return eval(laplace_term.replace('VPINN.laplace(x, y, u)', 'self.Laplace(x_, y_, u_)'), globals(), {'x_': x, 'y_': y, 'u_': u, 'self': self})
+            return eval(laplace_term.replace('VPINN.laplace(x, y, u)', 'quad_integral.integral(self.Laplace)'), globals(), {'self': self})
         return wrapper
 
     def index2frame(self, index, grid_num):
@@ -91,6 +94,10 @@ class VPINN:
     @staticmethod
     def laplace(x, y, u):
         return torch.zeros_like(x)
+    
+    @staticmethod
+    def LAPLACE_TERM(term):
+        return torch.zeros_like(term)
     
     @staticmethod
     def gradients(u, x, order=1):
@@ -136,7 +143,7 @@ class VPINN:
         if self.calls_laplace == False:
             int1 = quad_integral.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
         else:
-            laplace_conponent = quad_integral.integral(self.pde1) * ((1 / self.grid_num) ** 2)
+            laplace_conponent = self.pde1(None, None, None) * ((1 / self.grid_num) ** 2)
             rest = quad_integral.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
             int1 = laplace_conponent + rest
         

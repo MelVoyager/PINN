@@ -6,7 +6,6 @@ import numpy as np
 os.chdir(sys.path[0])
 
 # define the pde and boundary condition
-
 def u(x, y):
     return (0.1 * torch.sin(2 * torch.pi * x) + torch.tanh(10 * x)) * torch.sin(2 * torch.pi * y)
 
@@ -17,7 +16,7 @@ def f(x, y, m=1, n=1, c=0.1, k=10):
     return -(term1 + term2)
 
 def pde(x, y, u):
-    return 5 * VPINN.laplace(x, y, u) - 5 * f(x, y)
+    return VPINN.LAPLACE_TERM(5 * (5 + (VPINN.laplace(x, y, u)))) - 5 * f(x, y) - 25
 
 def transform(x):
     return x
@@ -49,10 +48,10 @@ def bc(boundary_num, device='cpu'):
 
 device = 'cpu'
 # train the model
-vpinn = VPINN([2, 15, 15, 15, 1], pde, bc(80, device=device), Q=10, grid_num=6, test_fcn_num=5, 
+vpinn = VPINN([2, 15, 15, 15, 1], pde, bc(80, device=device), Q=30, grid_num=6, test_fcn_num=5, 
             device=device, load=None)
 net = vpinn.train("Poisson", epoch_num=10000, coef=10)
-# net = vpinn.train(None, epoch_num=0, coef=10)
+net = vpinn.train(None, epoch_num=0, coef=10)
 
 
 # verify
