@@ -157,7 +157,8 @@ class VPINN:
             optimizer.step()
         
         if model_name:
-            torch.save(self.net, './model/'+model_name+f'{self.layer_sizes}'+f',Q={self.Q}'+f',grid_num={self.grid_num}'+\
-                f',test_fcn={self.test_fcn_num}'+f',load={self.load}'+f',epoch={epoch_num})'+'.pth')
+            path = (f'./model/{model_name}{self.layer_sizes},Q={self.Q},grid_num={self.grid_num}'
+                    f',test_fcn={self.test_fcn_num},load={self.load},epoch={epoch_num}).pth')
+            torch.save(self.net, path)
         return self.net
         
