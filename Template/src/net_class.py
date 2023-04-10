@@ -3,6 +3,7 @@ import math
 import torch.nn as nn
 import torch.nn.init as init
 
+'''
 class MyLinearLayer(nn.Module):
     """ Custom Linear layer but mimics a standard linear layer """
     def __init__(self, size_in, size_out):
@@ -24,13 +25,14 @@ class MyLinearLayer(nn.Module):
         return torch.add(w_times_x, self.bias)  # w times x + b
     
 # Neural Network
+'''
 
 class MLP(torch.nn.Module):
     def __init__(self, layer_sizes):
         super(MLP, self).__init__()
         layers = []
         for i in range(len(layer_sizes) - 1):
-            layers.append(MyLinearLayer(layer_sizes[i], layer_sizes[i + 1]))
+            layers.append(nn.Linear(layer_sizes[i], layer_sizes[i + 1]))
             # layers.append(torch.nn.Linear(layer_sizes[i], layer_sizes[i + 1]))
             if i < len(layer_sizes) - 2:  # 不在最后一层时添加激活函数
                 layers.append(nn.Tanh())

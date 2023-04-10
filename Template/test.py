@@ -71,7 +71,7 @@ yy = yy.to('cpu')
 
 prediction = prediction.reshape(500, 500)
 prediction = prediction.transpose(0, 1)
-plt.imshow(prediction.detach().numpy(), cmap='hot', origin='lower')
+plt.imshow(prediction.detach().numpy(), cmap='jet', origin='lower')
 plt.colorbar()
 plt.savefig('prediction')
 plt.show()
