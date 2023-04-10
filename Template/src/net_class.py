@@ -31,6 +31,7 @@ class MLP(torch.nn.Module):
         layers = []
         for i in range(len(layer_sizes) - 1):
             layers.append(MyLinearLayer(layer_sizes[i], layer_sizes[i + 1]))
+            # layers.append(torch.nn.Linear(layer_sizes[i], layer_sizes[i + 1]))
             if i < len(layer_sizes) - 2:  # 不在最后一层时添加激活函数
                 layers.append(nn.Tanh())
         self.net = nn.Sequential(*layers)

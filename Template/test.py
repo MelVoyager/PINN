@@ -51,7 +51,7 @@ def bc(boundary_num):
 
 #############################################################################################
 # train the model
-device = 'mps'
+device = 'cpu'
 vpinn = VPINN([2, 15, 15, 15, 1], pde, bc(80), Q=10, grid_num=6, test_fcn_num=5, 
             device=device, load=None)
 
