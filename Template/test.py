@@ -26,7 +26,7 @@ def pde(x, y, u):
 
 #############################################################################################
 # boundary condition
-def bc(boundary_num, device='cpu'):
+def bc(boundary_num):
     xs = []
     ys = []
     x1, y1, x2, y2 = (-1, -1, 1, 1)
@@ -51,8 +51,8 @@ def bc(boundary_num, device='cpu'):
 
 #############################################################################################
 # train the model
-device = 'cpu'
-vpinn = VPINN([2, 15, 15, 15, 1], pde, bc(80, device=device), Q=10, grid_num=6, test_fcn_num=5, 
+device = 'mps'
+vpinn = VPINN([2, 15, 15, 15, 1], pde, bc(80), Q=10, grid_num=6, test_fcn_num=5, 
             device=device, load=None)
 
 
