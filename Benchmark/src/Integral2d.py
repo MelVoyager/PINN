@@ -18,8 +18,8 @@ class Quad_Integral:
         self.Wxx = self.Wxx.reshape(-1, 1).to(device)
         self.Wyy = self.Wyy.reshape(-1, 1).to(device)
     
-    def integral(self, u):
-        integral = torch.sum(u(self.XX, self.YY) * (self.Wxx * self.Wyy).squeeze(-1).unsqueeze(0).expand(-1, self.Q ** 2), dim=1)
+    def integral(self, func, x_=None, y_=None, u_=None):
+        integral = torch.sum(func(x_, y_, u_) * (self.Wxx * self.Wyy).squeeze(-1).unsqueeze(0).expand(-1, self.Q ** 2), dim=1)
         return integral
 
 quad_integral = Quad_Integral()

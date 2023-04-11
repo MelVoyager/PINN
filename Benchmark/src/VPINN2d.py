@@ -7,7 +7,6 @@ from .Integral2d import quad_integral
 from .lengendre import test_func
 from .net_class import MLP
 
-
 class VPINN:
     def __init__(self, layer_sizes, pde, bc, area = [-1, -1, 1, 1], Q=10, grid_num=4,test_fcn_num=5, device='cpu', load=None):
         self.pde = pde
@@ -20,7 +19,7 @@ class VPINN:
         self.layer_sizes = layer_sizes
         self.load = load
         if load:
-            self.net = torch.load('./model/'+load).to(device)
+            self.net = load
         else:
             self.net = MLP(layer_sizes).to(device)
             
@@ -51,7 +50,6 @@ class VPINN:
         
         self.grid_xs = xs.reshape(-1, 1)
         self.grid_ys = ys.reshape(-1, 1)
-        
         
         # pass the boundary sample pointf from arguments
         self.boundary_xs = bc[0].requires_grad_(True).to(device)
@@ -149,37 +147,8 @@ class VPINN:
     
     def train(self, model_name, epoch_num=10000, coef=10):
         optimizer = torch.optim.Adam(params=self.net.parameters())
-        if coef == 'auto':
-            autoFlg = True
-            coef = 1
-            beta = 0.9
-        else: autoFlg = False
-        
+            
         for i in tqdm(range(epoch_num)):
-            if autoFlg and epoch_num % 10 ==0:
-                loss_interior_weights = []
-                loss_bcs_weights = []
-                # 计算max_loss_interior
-                optimizer.zero_grad()
-                loss_res = self.__loss_interior()
-                loss_res.backward(retain_graph=True)
-                for name, para in self.net.named_parameters():
-                    if "weight" in name:
-                        loss_interior_weights.append(torch.max(torch.abs(para.grad)))
-                max_loss_res = max(loss_interior_weights)
-            
-                # 计算mean_loss_bcs
-                optimizer.zero_grad()
-                loss_bcs = coef * self.__loss_bc()
-                loss_bcs.backward(retain_graph=True)
-                for name, para in self.net.named_parameters():
-                    if "weight" in name:
-                        loss_bcs_weights.append(torch.mean(torch.abs(para.grad)))
-                mean_loss_bcs = torch.mean(torch.tensor(loss_bcs_weights)).item()
-            
-                # 更新coef并，加和得到loss_total
-                coef = (max_loss_res / mean_loss_bcs) * (1 - beta) + coef * beta
-            
             optimizer.zero_grad()
             loss = self.__loss_interior() + coef * self.__loss_bc()
             
@@ -190,7 +159,7 @@ class VPINN:
         
         if model_name:
             path = (f'./model/{model_name}{self.layer_sizes},Q={self.Q},grid_num={self.grid_num}'
-                    f',test_fcn={self.test_fcn_num},load={self.load},epoch={epoch_num}).pth')
+                    f',test_fcn={self.test_fcn_num},epoch={epoch_num}).pth')
             torch.save(self.net, path)
         return self.net
         

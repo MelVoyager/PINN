@@ -6,5 +6,6 @@ xx, yy = torch.meshgrid(x, y)
 xx = xx.reshape(-1, 1)
 yy = yy.reshape(-1, 1)
 print(torch.cat([xx, yy], dim=1))
+print(xx.size())
 
 # print(a)
