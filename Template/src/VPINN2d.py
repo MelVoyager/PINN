@@ -9,7 +9,7 @@ from .net_class import MLP
 
 
 class VPINN:
-    def __init__(self, layer_sizes, pde, bc, Q=10, grid_num=6, test_fcn_num=5, device='cpu', load=None):
+    def __init__(self, layer_sizes, pde, bc, area = [-1, -1, 1, 1], Q=10, grid_num=4,test_fcn_num=5, device='cpu', load=None):
         self.pde = pde
         self.bc = bc
         self.Q = Q
@@ -25,21 +25,48 @@ class VPINN:
             self.net = MLP(layer_sizes).to(device)
             
         # define the grid sample points
-        xs = []
-        ys = []
-        quad_integral.init(Q,device)
+        quad_integral.init(Q, device)
         x = quad_integral.XX
         y = quad_integral.YY
-        for index in range(self.grid_num ** 2):
-            x1, y1, x2, y2 = self.__index2frame(index, self.grid_num)
-            xx = (x.reshape(-1, 1).requires_grad_(True) + 1) / self.grid_num + x1
-            yy = (y.reshape(-1, 1).requires_grad_(True) + 1) / self.grid_num + y1
-            xs.append(xx)
-            ys.append(yy)
-        xs = torch.cat(xs, dim=0).view(-1, 1)
-        ys = torch.cat(ys, dim=0).view(-1, 1)
-        self.grid_xs = xs
-        self.grid_ys = ys
+        # (x1, y1) stands for the left down point of the rectangle
+        # (x2, y2) stands for the right upper point of the rectangle
+        x1 = area[0]
+        y1 = area[1]
+        x2 = area[2]
+        y2 = area[3]
+        lower_xs = torch.linspace(x1, x2, grid_num + 1)[:-1]
+        lower_ys = torch.linspace(y1, y2, grid_num + 1)[:-1]
+        xx, yy = torch.meshgrid(lower_xs, lower_ys, indexing='ij')
+        x_bias = xx.reshape(-1, 1)
+        y_bias = yy.reshape(-1, 1)
+        
+        regularized_x = (x.reshape(1, -1).requires_grad_(True) + 1) / 2
+        regularized_y = (y.reshape(1, -1).requires_grad_(True) + 1) / 2
+        
+        x_grid_len = (x2 - x1) / grid_num
+        y_grid_len = (y2 - y1) / grid_num
+        
+        xs = regularized_x * x_grid_len + x_bias
+        ys = regularized_y * y_grid_len + y_bias
+        
+        self.grid_xs = xs.reshape(-1, 1)
+        self.grid_ys = ys.reshape(-1, 1)
+        
+        # xs = []
+        # ys = []
+        # for index in range(self.grid_num ** 2):
+        #     x1, y1, x2, y2 = self.__index2frame(index, self.grid_num)
+        #     xx = (x.reshape(-1, 1).requires_grad_(True) + 1) / self.grid_num + x1
+        #     yy = (y.reshape(-1, 1).requires_grad_(True) + 1) / self.grid_num + y1
+        #     xs.append(xx)
+        #     ys.append(yy)
+        # xs = torch.cat(xs, dim=0).view(-1, 1)
+        # ys = torch.cat(ys, dim=0).view(-1, 1)
+        # for i in range(len(ys)):
+        #     if ys[i] != self.grid_ys[i]:
+        #         print("False")
+        # self.grid_xs = xs
+        # self.grid_ys = ys
         
         # pass the boundary sample pointf from arguments
         self.boundary_xs = bc[0].requires_grad_(True).to(device)
@@ -74,15 +101,15 @@ class VPINN:
             return eval(laplace_term.replace('VPINN.laplace(x, y, u)', 'quad_integral.integral(self.Laplace)'), globals(), {'self': self})
         return wrapper
 
-    def __index2frame(self, index, grid_num):
-        i = index // grid_num
-        j = index % grid_num
-        grid_len = 2 / grid_num
-        x1 = -1 + i * grid_len
-        y1 = -1 + j * grid_len
-        x2 = -1 + (i + 1) * grid_len
-        y2 = -1 + (j + 1) * grid_len
-        return x1, y1, x2, y2
+    # def __index2frame(self, index, grid_num):
+    #     i = index // grid_num
+    #     j = index % grid_num
+    #     grid_len = 2 / grid_num
+    #     x1 = -1 + i * grid_len
+    #     y1 = -1 + j * grid_len
+    #     x2 = -1 + (i + 1) * grid_len
+    #     y2 = -1 + (j + 1) * grid_len
+    #     return x1, y1, x2, y2
     
     # just serve as a placeholder
     @staticmethod
@@ -147,12 +174,41 @@ class VPINN:
     
     def train(self, model_name, epoch_num=10000, coef=10):
         optimizer = torch.optim.Adam(params=self.net.parameters())
-        
+        if coef == 'auto':
+            autoFlg = True
+            coef = 1
+            beta = 0.9
+            
         for i in tqdm(range(epoch_num)):
+            if autoFlg and epoch_num % 10 ==0:
+                loss_interior_weights = []
+                loss_bcs_weights = []
+                # 计算max_loss_interior
+                optimizer.zero_grad()
+                loss_res = self.__loss_interior()
+                loss_res.backward(retain_graph=True)
+                for name, para in self.net.named_parameters():
+                    if "weight" in name:
+                        loss_interior_weights.append(torch.max(torch.abs(para.grad)))
+                max_loss_res = max(loss_interior_weights)
+            
+                # 计算mean_loss_bcs
+                optimizer.zero_grad()
+                loss_bcs = coef * self.__loss_bc()
+                loss_bcs.backward(retain_graph=True)
+                for name, para in self.net.named_parameters():
+                    if "weight" in name:
+                        loss_bcs_weights.append(torch.mean(torch.abs(para.grad)))
+                mean_loss_bcs = torch.mean(torch.tensor(loss_bcs_weights)).item()
+            
+                # 更新coef并，加和得到loss_total
+                coef = (max_loss_res / mean_loss_bcs) * (1 - beta) + coef * beta
+            
             optimizer.zero_grad()
             loss = self.__loss_interior() + coef * self.__loss_bc()
+            
             if i % 100 == 0:
-                print(f'loss_interior={self.__loss_interior().item():.5g}, loss_bc={self.__loss_bc().item():.5g}')
+                print(f'loss_interior={self.__loss_interior().item():.5g}, loss_bc={self.__loss_bc().item():.5g}, coef={coef}')
             loss.backward(retain_graph=True)
             optimizer.step()
         
