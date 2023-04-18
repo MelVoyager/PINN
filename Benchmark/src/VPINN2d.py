@@ -149,6 +149,8 @@ class VPINN:
             if self.pde2:
                 int1 = quad_integral.integral(self.__lhsWrapper) * ((1 / self.grid_num) ** 2)
                 int2 = quad_integral.integral(self.__lhsWrapper2) * ((1 / self.grid_num) ** 2)
+            else:
+                int1 = quad_integral.integral(self.__lhsWrapper) * ((1 / self.grid_num) ** 2)
         else:
             laplace_conponent = self.pde1(None, None, None) 
             rest = quad_integral.integral(self.__lhsWrapper)
