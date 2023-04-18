@@ -12,21 +12,22 @@ from src.VPINN2d import VPINN
 
 #############################################################################################
 # define the pde
-def u(x, y):
-    return (0.1 * torch.sin(2 * torch.pi * x) + torch.tanh(10 * x)) * torch.sin(2 * torch.pi * y)
+def u(x, t):
+    term1 = torch.sin(torch.tensor(torch.pi*x))*torch.cos(torch.tensor(2*torch.pi*t))
+    term2 = 0.5*torch.sin(torch.tensor(4*torch.pi*x))*torch.cos(torch.tensor(8*torch.pi*t))
+    result = term1 + term2
+    return result
 
-def f(x, y, m=1, n=1, c=0.1, k=10):
-    term1 = (4 * torch.pi**2 * m**2 * c * torch.sin(2 * torch.pi * m * x) +
-             (2 * k**2 * torch.sinh(k * x) / torch.cosh(k * x)**3)) * torch.sin(2 * torch.pi * n * y)
-    term2 = 4 * torch.pi**2 * n**2 * (c * torch.sin(2 * torch.pi * m * x) + torch.tanh(k * x)) * torch.sin(2 * torch.pi * n * y)
-    return -(term1 + term2)
 
 # VPINN.laplace represents the result of laplace operator applied to u with Green Theorem
 # When VPINN.laplace is used, you are expected to wrap the monomial with VPINN.LAPLACE_TERM() to distinguish
 # VPINN.LAPLACE_TERM can only contain a monomial of VPINN.laplace, polynomial is not allowed
 
-def pde(x, y, u):    
-    return VPINN.LAPLACE_TERM(VPINN.laplace(x, y, u)) - f(x, y)
+def pde(x, t, u):    
+    return VPINN.gradients(u, t, 2) - 4 * VPINN.gradients(u, x, 2)
+
+def pde2(x, t, u):    
+    return VPINN.gradients(u, t, 1)
 
 # this pde doesn't use the green theorem to simplify the equation
 # def pde(x, y, u):    
@@ -37,12 +38,12 @@ def pde(x, y, u):
 def bc(boundary_num):
     xs = []
     ys = []
-    x1, y1, x2, y2 = (-1, -1, 1, 1)
+    x1, y1, x2, y2 = (0, 0, 1, 1)
     x_r = torch.linspace(x2, x2, boundary_num).reshape(-1, 1)
     y_r = torch.linspace(y1, y2, boundary_num).reshape(-1, 1)
             
-    x_u = torch.linspace(x1, x2, boundary_num).reshape(-1, 1)
-    y_u = torch.linspace(y2, y2, boundary_num).reshape(-1, 1)
+    # x_u = torch.linspace(x1, x2, boundary_num).reshape(-1, 1)
+    # y_u = torch.linspace(y2, y2, boundary_num).reshape(-1, 1)
                 
     x_l = torch.linspace(x1, x1, boundary_num).reshape(-1, 1)
     y_l = torch.linspace(y1, y2, boundary_num).reshape(-1, 1)
@@ -50,8 +51,8 @@ def bc(boundary_num):
     x_d = torch.linspace(x1, x2, boundary_num).reshape(-1, 1)
     y_d = torch.linspace(y1, y1, boundary_num).reshape(-1, 1)
                 
-    xs.extend([x_r, x_u, x_l, x_d])
-    ys.extend([y_r, y_u, y_l, y_d])
+    xs.extend([x_r, x_l, x_d])
+    ys.extend([y_r, y_l, y_d])
     boundary_xs = torch.cat(xs, dim=0)
     boundary_ys = torch.cat(ys, dim=0)
     boundary_us = u(boundary_xs, boundary_ys)
@@ -60,15 +61,15 @@ def bc(boundary_num):
 #############################################################################################
 # train the model
 device = 'cpu'
-vpinn = VPINN([2, 10, 10, 10, 1],pde, bc(80), area=[-1, -1, 1, 1], Q=20, grid_num=6, test_fcn_num=5, 
-            device=device, load=None)
+vpinn = VPINN([2, 10, 10, 10, 1], pde, bc(80), area=[0, 1, 0, 1],pde2=pde2, Q=10, grid_num=8, test_fcn_num=5, 
+            device=device, load='Wave[2, 10, 10, 10, 1],Q=10,grid_num=8,test_fcn=5,epoch=10000).pth')
 
 
-net = vpinn.train("Poisson_1", epoch_num=10000, coef=10)
+net = vpinn.train("Wave", epoch_num=10000, coef=1)
 
 #############################################################################################
 # plot and verify
-xc = torch.linspace(-1, 1, 500)
+xc = torch.linspace(0, 1, 500)
 xx, yy = torch.meshgrid(xc, xc, indexing='ij')
 xx = xx.reshape(-1, 1)
 yy = yy.reshape(-1, 1)
@@ -77,21 +78,30 @@ prediction = net(xy)
 res = prediction - u(xx, yy)
 prediction = torch.reshape(prediction, (500, 500))
 res = torch.reshape(res, (500, 500))
+solution = u(xx, yy).reshape(500, 500)
 
 prediction = prediction.transpose(0, 1)
 res = res.transpose(0, 1)
-fig, ax = plt.subplots(nrows=1, ncols=2)
-fig.set_figwidth(13)
+solution = solution.transpose(0, 1)
+
+fig, ax = plt.subplots(nrows=1, ncols=3)
+fig.set_figwidth(15)
 fig.set_figheight(5)
 axes = ax.flatten()
 
-image1 = axes[0].imshow(prediction.detach().numpy(), cmap='jet', origin='lower', extent=[-1, 1, -1, 1])
+image1 = axes[0].imshow(prediction.detach().numpy(), cmap='jet', origin='lower', extent=[0, 1, 0, 1])
 axes[0].set_title('Prediction')
 fig.colorbar(image1, ax=axes[0])
 
-image2 = axes[1].imshow(res.detach().numpy(), cmap='jet', origin='lower', extent=[-1, 1, -1, 1])
-axes[1].set_title('Residual')
+image2 = axes[1].imshow(solution.detach().numpy(), cmap='jet', origin='lower', extent=[0, 1, 0, 1])
+axes[1].set_title('solution')
 fig.colorbar(image2, ax=axes[1])
+
+image3 = axes[2].imshow(res.detach().numpy(), cmap='jet', origin='lower', extent=[0, 1, 0, 1])
+axes[2].set_title('Residual')
+fig.colorbar(image3, ax=axes[2])
+
+
 fig.tight_layout()
 plt.savefig("prediction_and_residual.png")
 print(f'relative error={(torch.norm(res) / torch.norm(u(xx, yy))).item() * 100:.2f}%')

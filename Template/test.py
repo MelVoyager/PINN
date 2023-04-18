@@ -56,7 +56,7 @@ vpinn = VPINN([2, 15, 15, 15, 1],pde, bc(80), area=[-1, -1, 1, 1], Q=10, grid_nu
             device=device, load=None)
 
 
-net = vpinn.train("Poisson", epoch_num=10000, coef='auto')
+net = vpinn.train("Poisson", epoch_num=10000, coef=10)
 
 #############################################################################################
 # plot and verify
