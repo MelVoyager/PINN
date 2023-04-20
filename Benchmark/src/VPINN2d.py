@@ -119,7 +119,7 @@ class VPINN:
         result = result.view(-1, self.Q ** 2)
         return -result
 
-    def __lhsWrapper(self, x=None, y=None, u_in=None):
+    def lhsWrapper(self, x=None, y=None, u_in=None):
         u = self.net(torch.cat([self.grid_xs, self.grid_ys], dim=1))
         
         lhs = self.pde(self.grid_xs, self.grid_ys, u)
@@ -129,7 +129,7 @@ class VPINN:
         result = torch.reshape(result, (-1, self.Q ** 2))
         return result
     
-    def __lhsWrapper2(self, x=None, y=None, u_in=None):
+    def lhsWrapper2(self, x=None, y=None, u_in=None):
         u = self.net(torch.cat([self.grid_xs, self.grid_ys], dim=1))
         
         lhs = self.pde2(self.grid_xs, self.grid_ys, u)
@@ -139,21 +139,21 @@ class VPINN:
         result = torch.reshape(result, (-1, self.Q ** 2))
         return result
     
-    def __loss_bc(self):
+    def loss_bc(self):
         prediction = self.net(torch.cat([self.boundary_xs, self.boundary_ys], dim=1))
         solution = self.boundary_us
         return self.loss(prediction, solution)
         
-    def __loss_interior(self):
+    def loss_interior(self):
         if self.calls_laplace == False:
             if self.pde2:
-                int1 = quad_integral.integral(self.__lhsWrapper) * ((1 / self.grid_num) ** 2)
-                int2 = quad_integral.integral(self.__lhsWrapper2) * ((1 / self.grid_num) ** 2)
+                int1 = quad_integral.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
+                int2 = quad_integral.integral(self.lhsWrapper2) * ((1 / self.grid_num) ** 2)
             else:
-                int1 = quad_integral.integral(self.__lhsWrapper) * ((1 / self.grid_num) ** 2)
+                int1 = quad_integral.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
         else:
             laplace_conponent = self.pde1(None, None, None) 
-            rest = quad_integral.integral(self.__lhsWrapper)
+            rest = quad_integral.integral(self.lhsWrapper)
             int1 = (laplace_conponent + rest) * ((1 / self.grid_num) ** 2)
         
         ref = torch.zeros_like(int1).requires_grad_(True)
@@ -169,10 +169,10 @@ class VPINN:
             
         for i in tqdm(range(epoch_num)):
             optimizer.zero_grad()
-            loss = self.__loss_interior() + coef * self.__loss_bc()
+            loss = self.loss_interior() + coef * self.loss_bc()
             
             if i % 100 == 0:
-                print(f'loss_interior={self.__loss_interior().item():.5g}, loss_bc={self.__loss_bc().item():.5g}, coef={coef}')
+                print(f'loss_interior={self.loss_interior().item():.5g}, loss_bc={self.loss_bc().item():.5g}, coef={coef}')
             loss.backward(retain_graph=True)
             optimizer.step()
         

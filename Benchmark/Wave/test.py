@@ -13,8 +13,8 @@ from src.VPINN2d import VPINN
 #############################################################################################
 # define the pde
 def u(x, t):
-    term1 = torch.sin(torch.tensor(torch.pi*x))*torch.cos(torch.tensor(2*torch.pi*t))
-    term2 = 0.5*torch.sin(torch.tensor(4*torch.pi*x))*torch.cos(torch.tensor(8*torch.pi*t))
+    term1 = torch.sin(torch.pi*x)*torch.cos(2*torch.pi*t)
+    term2 = 0.5*torch.sin(4*torch.pi*x)*torch.cos(8*torch.pi*t)
     result = term1 + term2
     return result
 
@@ -23,7 +23,7 @@ def u(x, t):
 # When VPINN.laplace is used, you are expected to wrap the monomial with VPINN.LAPLACE_TERM() to distinguish
 # VPINN.LAPLACE_TERM can only contain a monomial of VPINN.laplace, polynomial is not allowed
 
-def pde(x, t, u):    
+def pde(x, t, u):
     return VPINN.gradients(u, t, 2) - 4 * VPINN.gradients(u, x, 2)
 
 def pde2(x, t, u):    
@@ -61,11 +61,11 @@ def bc(boundary_num):
 #############################################################################################
 # train the model
 device = 'cpu'
-vpinn = VPINN([2, 10, 10, 10, 1], pde, bc(80), area=[0, 1, 0, 1],pde2=pde2, Q=10, grid_num=8, test_fcn_num=5, 
-            device=device, load='Wave[2, 10, 10, 10, 1],Q=10,grid_num=8,test_fcn=5,epoch=10000).pth')
+vpinn = VPINN([2, 20, 20, 20, 1], pde, bc(80), area=[0, 1, 0, 1],pde2=pde2, Q=10, grid_num=8, test_fcn_num=5, 
+            device=device, load=None)
 
 
-net = vpinn.train("Wave", epoch_num=10000, coef=1)
+net = vpinn.train("Wave", epoch_num=10000, coef=0.1)
 
 #############################################################################################
 # plot and verify
