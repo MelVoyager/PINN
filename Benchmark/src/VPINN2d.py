@@ -7,11 +7,11 @@ from .Integral2d import quad_integral
 from .lengendre import test_func
 from .net_class import MLP
 
+
 class VPINN:
-    def __init__(self, layer_sizes, pde, bc, area = [-1, 1, -1, 1], pde2=None, Q=10, grid_num=4,test_fcn_num=5, device='cpu', load=None):
+    def __init__(self, layer_sizes, pde, bc1=None, bc2=None, area = [-1, 1, -1, 1], Q=10, grid_num=4,test_fcn_num=5, device='cpu', load=None):
         self.pde = pde
-        self.pde2 = pde2
-        self.bc = bc
+        self.bc1 = bc1
         self.Q = Q
         self.grid_num = grid_num
         self.test_fcn_num = test_fcn_num
@@ -37,8 +37,8 @@ class VPINN:
         lower_xs = torch.linspace(x1, x2, grid_num + 1)[:-1]
         lower_ys = torch.linspace(y1, y2, grid_num + 1)[:-1]
         xx, yy = torch.meshgrid(lower_xs, lower_ys, indexing='ij')
-        x_bias = xx.reshape(-1, 1)
-        y_bias = yy.reshape(-1, 1)
+        x_bias = xx.reshape(-1, 1).to(device)
+        y_bias = yy.reshape(-1, 1).to(device)
         
         regularized_x = (x.reshape(1, -1).requires_grad_(True) + 1) / 2
         regularized_y = (y.reshape(1, -1).requires_grad_(True) + 1) / 2
@@ -49,13 +49,20 @@ class VPINN:
         xs = regularized_x * x_grid_len + x_bias
         ys = regularized_y * y_grid_len + y_bias
         
-        self.grid_xs = xs.reshape(-1, 1)
-        self.grid_ys = ys.reshape(-1, 1)
+        self.grid_xs = xs.reshape(-1, 1).to(device)
+        self.grid_ys = ys.reshape(-1, 1).to(device)
         
         # pass the boundary sample pointf from arguments
-        self.boundary_xs = bc[0].requires_grad_(True).to(device)
-        self.boundary_ys = bc[1].requires_grad_(True).to(device)
-        self.boundary_us = bc[2].requires_grad_(True).to(device)
+        self.bc1_xs = bc1[0].requires_grad_(True).to(device).reshape(-1,1)
+        self.bc1_ys = bc1[1].requires_grad_(True).to(device).reshape(-1,1)
+        self.bc1_us = bc1[2].requires_grad_(True).to(device).reshape(-1,1)
+        
+        self.bc2 = bc2
+        if bc2:
+            self.bc2_xs = bc2[0].requires_grad_(True).to(device).reshape(-1,1)
+            self.bc2_ys = bc2[1].requires_grad_(True).to(device).reshape(-1,1)
+            self.bc2_us = bc2[2].requires_grad_(True).to(device).reshape(-1,1)
+            self.bc2_operation = bc2[3]
         
         # define the test functions
         test_func.init(self.test_fcn_num)
@@ -139,40 +146,47 @@ class VPINN:
         result = torch.reshape(result, (-1, self.Q ** 2))
         return result
     
-    def loss_bc(self):
-        prediction = self.net(torch.cat([self.boundary_xs, self.boundary_ys], dim=1))
-        solution = self.boundary_us
+    def loss_bc1(self):
+        prediction = self.net(torch.cat([self.bc1_xs, self.bc1_ys], dim=1))
+        solution = self.bc1_us
         return self.loss(prediction, solution)
-        
+    
+    def loss_bc2(self):
+        u = self.net(torch.cat([self.bc2_xs, self.bc2_ys], dim=1))
+        prediction = self.bc2_operation(self.bc2_xs, self.bc2_ys, u)
+        solution = self.bc2_us
+        return self.loss(prediction, solution)
+        # return torch.median(torch.abs(prediction - solution))
+    
     def loss_interior(self):
         if self.calls_laplace == False:
-            if self.pde2:
-                int1 = quad_integral.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
-                int2 = quad_integral.integral(self.lhsWrapper2) * ((1 / self.grid_num) ** 2)
-            else:
-                int1 = quad_integral.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
+            int1 = quad_integral.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
         else:
             laplace_conponent = self.pde1(None, None, None) 
             rest = quad_integral.integral(self.lhsWrapper)
             int1 = (laplace_conponent + rest) * ((1 / self.grid_num) ** 2)
         
-        ref = torch.zeros_like(int1).requires_grad_(True)
+        int2 = torch.zeros_like(int1).requires_grad_(True)
         
-        if self.pde2:
-            return self.loss(int1, ref) + self.loss(int2, ref)
-        else:
-            return self.loss(int1, ref)
+        return self.loss(int1, int2)
+        # return torch.median(torch.abs(int1 - int2))
     
     
     def train(self, model_name, epoch_num=10000, coef=10):
-        optimizer = torch.optim.Adam(params=self.net.parameters())
+        optimizer = torch.optim.Adam(params=self.net.parameters(), lr=1e-3)
             
         for i in tqdm(range(epoch_num)):
             optimizer.zero_grad()
-            loss = self.loss_interior() + coef * self.loss_bc()
+            if self.bc2:
+                loss = self.loss_interior() + coef * self.loss_bc1() + self.loss_bc2()
+            else:
+                loss = self.loss_interior() + coef * self.loss_bc1()
             
             if i % 100 == 0:
-                print(f'loss_interior={self.loss_interior().item():.5g}, loss_bc={self.loss_bc().item():.5g}, coef={coef}')
+                if self.bc2:
+                    print(f'loss_interior={self.loss_interior().item():.5g}, loss_bc1={self.loss_bc1().item():.5g}, loss_bc2={self.loss_bc2().item():.5g}')
+                else:
+                    print(f'loss_interior={self.loss_interior().item():.5g}, loss_bc={self.loss_bc1().item():.5g}')
             loss.backward(retain_graph=True)
             optimizer.step()
         
