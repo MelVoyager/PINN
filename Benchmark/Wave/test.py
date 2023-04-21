@@ -26,8 +26,6 @@ def u(x, t):
 def pde(x, t, u):
     return VPINN.gradients(u, t, 2) - 4 * VPINN.gradients(u, x, 2)
 
-
-
 # this pde doesn't use the green theorem to simplify the equation
 # def pde(x, y, u):    
     # return VPINN.gradients(u, x, 2) + VPINN.gradients(u, y, 2) - f(x, y)
@@ -67,12 +65,12 @@ def bc2(boundary_num):
 
 #############################################################################################
 # train the model
-device = 'cuda'
-vpinn = VPINN([2, 20, 20, 20, 1], pde, bc1(100), bc2(100),area=[0, 1, 0, 1], Q=10, grid_num=16, test_fcn_num=5, 
-            device=device, load='Wave_std.pth')
+device = 'cpu'
+vpinn = VPINN([2, 20, 20, 20, 1], pde, bc1(100),area=[0, 1, 0, 1], Q=10, grid_num=16, test_fcn_num=5, 
+            device=device, load=None)
 
 
-net = vpinn.train("Wave", epoch_num=1000, coef=10)
+net = vpinn.train("Wave", epoch_num=10000, coef=0.1)
 
 #############################################################################################
 # plot and verify
