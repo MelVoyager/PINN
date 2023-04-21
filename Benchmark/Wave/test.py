@@ -23,8 +23,11 @@ def u(x, t):
 # When VPINN.laplace is used, you are expected to wrap the monomial with VPINN.LAPLACE_TERM() to distinguish
 # VPINN.LAPLACE_TERM can only contain a monomial of VPINN.laplace, polynomial is not allowed
 
-def pde(x, t, u):
+def pde(x, t, u):    
     return VPINN.gradients(u, t, 2) - 4 * VPINN.gradients(u, x, 2)
+
+# def pde2(x, t, u):    
+    # return VPINN.gradients(u, t, 1)
 
 # this pde doesn't use the green theorem to simplify the equation
 # def pde(x, y, u):    
@@ -32,7 +35,7 @@ def pde(x, t, u):
 
 #############################################################################################
 # boundary condition
-def bc1(boundary_num):
+def bc(boundary_num):
     xs = []
     ys = []
     x1, y1, x2, y2 = (0, 0, 1, 1)
@@ -55,22 +58,14 @@ def bc1(boundary_num):
     boundary_us = u(boundary_xs, boundary_ys)
     return (boundary_xs, boundary_ys, boundary_us)
 
-def bc2(boundary_num):
-    x1, y1, x2, y2 = (0, 0, 1, 1)
-    x = torch.linspace(x1, x2, boundary_num)
-    y = torch.zeros_like(x)
-    u = torch.zeros_like(x)
-    operator = lambda x, y, u: VPINN.gradients(u, y, 1)
-    return (x, y, u, operator)
-
 #############################################################################################
 # train the model
 device = 'cpu'
-vpinn = VPINN([2, 20, 20, 20, 1], pde, bc1(100),area=[0, 1, 0, 1], Q=10, grid_num=16, test_fcn_num=5, 
-            device=device, load=None)
+vpinn = VPINN([2, 10, 10, 10, 1], pde, bc(80), area=[0, 1, 0, 1], Q=10, grid_num=8, test_fcn_num=5, 
+            device=device, load='Wave_std.pth')
 
 
-net = vpinn.train("Wave", epoch_num=10000, coef=0.1)
+net = vpinn.train("Wave", epoch_num=100, coef=1)
 
 #############################################################################################
 # plot and verify
@@ -79,7 +74,6 @@ xx, yy = torch.meshgrid(xc, xc, indexing='ij')
 xx = xx.reshape(-1, 1)
 yy = yy.reshape(-1, 1)
 xy = torch.cat([xx, yy], dim=1)
-net.cpu()
 prediction = net(xy)
 res = prediction - u(xx, yy)
 prediction = torch.reshape(prediction, (500, 500))

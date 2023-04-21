@@ -100,7 +100,7 @@ class VPINN:
     def __extract_laplace_term(self, func, laplace_term):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            return eval(laplace_term.replace('VPINN.laplace(x, y, u)', 'quad_integral2d.integral(self.Laplace)'), globals(), {'self': self})
+            return eval(laplace_term.replace('VPINN.laplace(x, y, u)', 'quad_integral3d.integral(self.Laplace)'), globals(), {'self': self})
         return wrapper
 
     # just serve as a placeholder
@@ -138,9 +138,9 @@ class VPINN:
         return -result
 
     def lhsWrapper(self):
-        u = self.net(torch.cat([self.grid_xs, self.grid_ys], dim=1))
+        u = self.net(torch.cat([self.grid_xs, self.grid_ys, self.grid_zs], dim=1))
         
-        lhs = self.pde(self.grid_xs, self.grid_ys, u)
+        lhs = self.pde(self.grid_xs, self.grid_ys, self.grid_zs, u)
         
         result = torch.einsum('mc,nc->mnc', \
             lhs.view(self.grid_num ** 2, self.Q ** 2), self.test_fcn0.view(self.test_fcn_num ** 2, self.Q ** 2))
