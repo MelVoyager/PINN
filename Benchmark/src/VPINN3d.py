@@ -65,7 +65,7 @@ class VPINN:
         # pass the boundary sample pointf from arguments
         self.bc1_xs = bc1[0].requires_grad_(True).to(device).reshape(-1,1)
         self.bc1_ys = bc1[1].requires_grad_(True).to(device).reshape(-1,1)
-        self.bc1_ys = bc1[2].requires_grad_(True).to(device).reshape(-1,1)
+        self.bc1_zs = bc1[2].requires_grad_(True).to(device).reshape(-1,1)
         self.bc1_us = bc1[3].requires_grad_(True).to(device).reshape(-1,1)
         
         if bc2:
@@ -78,7 +78,7 @@ class VPINN:
         # define the test functions
         test_func.init(self.test_fcn_num)
         self.test_fcn0 = test_func.test_func(0, x, y, z)
-        self.test_fcn1 = test_func.test_func(1, x, y, z)
+        # self.test_fcn1 = test_func.test_func(1, x, y, z)
         
         # check whether the laplace function is used
         source_code = inspect.getsource(pde)
@@ -143,38 +143,38 @@ class VPINN:
         lhs = self.pde(self.grid_xs, self.grid_ys, self.grid_zs, u)
         
         result = torch.einsum('mc,nc->mnc', \
-            lhs.view(self.grid_num ** 2, self.Q ** 2), self.test_fcn0.view(self.test_fcn_num ** 2, self.Q ** 2))
-        result = result.reshape(-1, self.Q ** 2)
+            lhs.view(self.grid_num ** 3, self.Q ** 3), self.test_fcn0.view(self.test_fcn_num ** 3, self.Q ** 3))
+        result = result.reshape(-1, self.Q ** 3)
         return result
     
     def lhsWrapper2(self):
-        u = self.net(torch.cat([self.grid_xs, self.grid_ys], dim=1))
+        u = self.net(torch.cat([self.grid_xs, self.grid_ys, self.grid_zs], dim=1))
         
-        lhs = self.pde2(self.grid_xs, self.grid_ys, u)
+        lhs = self.pde2(self.grid_xs, self.grid_ys, self.grid_zs, u)
         
         result = torch.einsum('mc,nc->mnc', \
-            lhs.view(self.grid_num ** 2, self.Q ** 2), self.test_fcn0.view(self.test_fcn_num ** 2, self.Q ** 2))
-        result = torch.reshape(result, (-1, self.Q ** 2))
+            lhs.view(self.grid_num ** 3, self.Q ** 3), self.test_fcn0.view(self.test_fcn_num ** 3, self.Q ** 3))
+        result = torch.reshape(result, (-1, self.Q ** 3))
         return result
     
     def loss_bc1(self):
-        prediction = self.net(torch.cat([self.bc1_xs, self.bc1_ys], dim=1))
+        prediction = self.net(torch.cat([self.bc1_xs, self.bc1_ys, self.bc1_zs], dim=1))
         solution = self.bc1_us
         return self.loss(prediction, solution)
     
     def loss_bc2(self):
-        u = self.net(torch.cat([self.bc2_xs, self.bc2_ys], dim=1))
-        prediction = self.bc2_operation(self.bc2_xs, self.bc2_ys, u)
+        u = self.net(torch.cat([self.bc2_xs, self.bc2_ys, self.bc2_zs], dim=1))
+        prediction = self.bc2_operation(self.bc2_xs, self.bc2_ys, self.bc2_zs,u)
         solution = self.bc2_us
         return self.loss(prediction, solution)
         # return torch.median(torch.abs(prediction - solution))
     
     def loss_interior(self):
         if self.calls_laplace == False:
-            int1 = quad_integral2d.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
+            int1 = quad_integral3d.integral(self.lhsWrapper) * ((1 / self.grid_num) ** 2)
         else:
             laplace_conponent = self.pde1(None, None, None) 
-            rest = quad_integral2d.integral(self.lhsWrapper)
+            rest = quad_integral3d.integral(self.lhsWrapper)
             int1 = (laplace_conponent + rest) * ((1 / self.grid_num) ** 2)
         
         int2 = torch.zeros_like(int1).requires_grad_(True)
