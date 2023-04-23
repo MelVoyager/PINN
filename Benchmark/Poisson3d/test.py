@@ -33,7 +33,7 @@ def bc(boundary_num=10):
 
 device = 'cuda'
 vpinn = VPINN([3, 20, 20, 20, 1],pde, bc(10), area=[-1, 1, -1, 1, -1, 1], Q=10, grid_num=4, test_fcn_num=5, 
-            device=device, load=None)
+            device=device, load=None) 
 
 # vpinn.net = nn.DataParallel(vpinn.net)
 # profiler=Profiler()
