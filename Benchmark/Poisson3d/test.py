@@ -1,7 +1,8 @@
 import torch
 import numpy as np
 import sys, os
-# import pyinstrument
+import torch.nn as nn
+from pyinstrument import Profiler
 import matplotlib.pyplot as plt
 from matplotlib.tri import Triangulation
 from pathlib import Path
@@ -12,7 +13,7 @@ os.chdir(sys.path[0])
 from src.VPINN3d import VPINN
 
 def u(x, y, z):
-    return x ** 2 + y ** 2 + z ** 2
+    return x ** 2 + y ** 2 + z ** 2 + 10
 
 def pde(x, y, z, u):
     return VPINN.gradients(u, x, 2) + VPINN.gradients(u, y, 2) + VPINN.gradients(u, z, 2) - 6
@@ -30,12 +31,22 @@ def bc(boundary_num=10):
     bc_us = u(bc_xs, bc_ys, bc_zs)
     return (bc_xs, bc_ys, bc_zs, bc_us)
 
-device = 'cpu'
-vpinn = VPINN([3, 10, 10, 10, 1],pde, bc(10), area=[-1, -1, 1, 1, -1, 1], Q=10, grid_num=4, test_fcn_num=5, 
+device = 'cuda'
+vpinn = VPINN([3, 10, 10, 10, 1],pde, bc(10), area=[-1, 1, -1, 1, -1, 1], Q=10, grid_num=4, test_fcn_num=5, 
             device=device, load=None)
+
+# vpinn.net = nn.DataParallel(vpinn.net)
+# profiler=Profiler()
+# profiler.start()
+
 net = vpinn.train('Poisson3d', epoch_num=10000, coef=1)
 
+# profiler.stop()
+# profiler.print()
+# net = vpinn.train(None, epoch_num=0, coef=1)
+
 ################################################################################
+net.cpu()
 x = torch.linspace(-1, 1, 50)
 y = x
 z = x
