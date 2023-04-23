@@ -168,7 +168,7 @@ class VPINN:
             else:
                 loss = self.__loss_interior() + coef * self.__loss_bc1()
             
-            if i % 100 == 0:
+            if i % 1000 == 0:
                 print(f'loss_interior={self.__loss_interior().item():.5g}, loss_bc={self.__loss_bc1().item():.5g}, coef={coef}')
             loss.backward(retain_graph=True)
             optimizer.step()

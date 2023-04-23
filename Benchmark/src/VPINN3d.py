@@ -193,7 +193,7 @@ class VPINN:
             else:
                 loss = self.loss_interior() + coef * self.loss_bc1()
             
-            if i % 100 == 0:
+            if i % 1000 == 0:
                 if self.bc2:
                     print(f'loss_interior={self.loss_interior().item():.5g}, loss_bc1={self.loss_bc1().item():.5g}, loss_bc2={self.loss_bc2().item():.5g}')
                 else:
