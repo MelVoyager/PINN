@@ -66,7 +66,7 @@ def wave():
                 device=device, load='Wave_std.pth')
 
 
-    net = vpinn.train("Wave", epoch_num=10000, coef=1)
+    net = vpinn.train("Wave", epoch_num=100, coef=1)
 
     #############################################################################################
     # plot and verify
