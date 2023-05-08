@@ -173,7 +173,7 @@ class VPINN:
             loss.backward(retain_graph=True)
             optimizer.step()
         
-        if model_name:
+        if model_name and epoch_num != 0:
             path = (f'./model/{model_name}{self.layer_sizes},Q={self.Q},grid_num={self.grid_num}'
                     f',test_fcn={self.test_fcn_num},epoch={epoch_num}).pth')
             torch.save(self.net, path)
