@@ -59,40 +59,45 @@ def bc(boundary_num):
 
 #############################################################################################
 # train the model
-device = 'cpu'
-vpinn = VPINN([2, 10, 10, 10, 1],pde, bc(80), area=[-1, -1, 1, 1], Q=20, grid_num=6, test_fcn_num=5, 
-            device=device, load=None)
+def poisson2d():
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    vpinn = VPINN([2, 10, 10, 10, 1],pde, bc(80), area=[-1, -1, 1, 1], Q=20, grid_num=6, test_fcn_num=5, 
+                device=device, load=None)
 
 
-net = vpinn.train("Poisson_1", epoch_num=10000, coef=10)
+    net = vpinn.train("Poisson_1", epoch_num=10000, coef=10)
+    net.cpu()
+    #############################################################################################
+    # plot and verify
+    xc = torch.linspace(-1, 1, 500)
+    xx, yy = torch.meshgrid(xc, xc, indexing='ij')
+    xx = xx.reshape(-1, 1)
+    yy = yy.reshape(-1, 1)
+    xy = torch.cat([xx, yy], dim=1)
+    prediction = net(xy)
+    res = prediction - u(xx, yy)
+    prediction = torch.reshape(prediction, (500, 500))
+    res = torch.reshape(res, (500, 500))
 
-#############################################################################################
-# plot and verify
-xc = torch.linspace(-1, 1, 500)
-xx, yy = torch.meshgrid(xc, xc, indexing='ij')
-xx = xx.reshape(-1, 1)
-yy = yy.reshape(-1, 1)
-xy = torch.cat([xx, yy], dim=1)
-prediction = net(xy)
-res = prediction - u(xx, yy)
-prediction = torch.reshape(prediction, (500, 500))
-res = torch.reshape(res, (500, 500))
+    prediction = prediction.transpose(0, 1)
+    res = res.transpose(0, 1)
+    fig, ax = plt.subplots(nrows=1, ncols=2)
+    fig.set_figwidth(13)
+    fig.set_figheight(5)
+    axes = ax.flatten()
 
-prediction = prediction.transpose(0, 1)
-res = res.transpose(0, 1)
-fig, ax = plt.subplots(nrows=1, ncols=2)
-fig.set_figwidth(13)
-fig.set_figheight(5)
-axes = ax.flatten()
+    image1 = axes[0].imshow(prediction.detach().numpy(), cmap='jet', origin='lower', extent=[-1, 1, -1, 1])
+    axes[0].set_title('Prediction')
+    fig.colorbar(image1, ax=axes[0])
 
-image1 = axes[0].imshow(prediction.detach().numpy(), cmap='jet', origin='lower', extent=[-1, 1, -1, 1])
-axes[0].set_title('Prediction')
-fig.colorbar(image1, ax=axes[0])
+    image2 = axes[1].imshow(res.detach().numpy(), cmap='jet', origin='lower', extent=[-1, 1, -1, 1])
+    axes[1].set_title('Residual')
+    fig.colorbar(image2, ax=axes[1])
+    fig.tight_layout()
+    plt.savefig("prediction_and_residual.png")
+    print(f'relative error={(torch.norm(res) / torch.norm(u(xx, yy))).item() * 100:.2f}%')
+    # plt.show()
+    return torch.norm(res) / torch.norm(u(xx, yy))
 
-image2 = axes[1].imshow(res.detach().numpy(), cmap='jet', origin='lower', extent=[-1, 1, -1, 1])
-axes[1].set_title('Residual')
-fig.colorbar(image2, ax=axes[1])
-fig.tight_layout()
-plt.savefig("prediction_and_residual.png")
-print(f'relative error={(torch.norm(res) / torch.norm(u(xx, yy))).item() * 100:.2f}%')
-plt.show()
+if __name__ == "__main__":
+    poisson2d()

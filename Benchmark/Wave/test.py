@@ -60,49 +60,54 @@ def bc(boundary_num):
 
 #############################################################################################
 # train the model
-device = 'cpu'
-vpinn = VPINN([2, 10, 10, 10, 1], pde, bc(80), area=[0, 1, 0, 1], Q=10, grid_num=8, test_fcn_num=5, 
-            device=device, load='Wave_std.pth')
+def wave():
+    device = 'cpu'
+    vpinn = VPINN([2, 10, 10, 10, 1], pde, bc(80), area=[0, 1, 0, 1], Q=10, grid_num=8, test_fcn_num=5, 
+                device=device, load='Wave_std.pth')
 
 
-net = vpinn.train("Wave", epoch_num=100, coef=1)
+    net = vpinn.train("Wave", epoch_num=10000, coef=1)
 
-#############################################################################################
-# plot and verify
-xc = torch.linspace(0, 1, 500)
-xx, yy = torch.meshgrid(xc, xc, indexing='ij')
-xx = xx.reshape(-1, 1)
-yy = yy.reshape(-1, 1)
-xy = torch.cat([xx, yy], dim=1)
-prediction = net(xy)
-res = prediction - u(xx, yy)
-prediction = torch.reshape(prediction, (500, 500))
-res = torch.reshape(res, (500, 500))
-solution = u(xx, yy).reshape(500, 500)
+    #############################################################################################
+    # plot and verify
+    xc = torch.linspace(0, 1, 500)
+    xx, yy = torch.meshgrid(xc, xc, indexing='ij')
+    xx = xx.reshape(-1, 1)
+    yy = yy.reshape(-1, 1)
+    xy = torch.cat([xx, yy], dim=1)
+    prediction = net(xy)
+    res = prediction - u(xx, yy)
+    prediction = torch.reshape(prediction, (500, 500))
+    res = torch.reshape(res, (500, 500))
+    solution = u(xx, yy).reshape(500, 500)
 
-prediction = prediction.transpose(0, 1)
-res = res.transpose(0, 1)
-solution = solution.transpose(0, 1)
+    prediction = prediction.transpose(0, 1)
+    res = res.transpose(0, 1)
+    solution = solution.transpose(0, 1)
 
-fig, ax = plt.subplots(nrows=1, ncols=3)
-fig.set_figwidth(15)
-fig.set_figheight(5)
-axes = ax.flatten()
+    fig, ax = plt.subplots(nrows=1, ncols=3)
+    fig.set_figwidth(15)
+    fig.set_figheight(5)
+    axes = ax.flatten()
 
-image1 = axes[0].imshow(prediction.detach().numpy(), cmap='jet', origin='lower', extent=[0, 1, 0, 1])
-axes[0].set_title('Prediction')
-fig.colorbar(image1, ax=axes[0])
+    image1 = axes[0].imshow(prediction.detach().numpy(), cmap='jet', origin='lower', extent=[0, 1, 0, 1])
+    axes[0].set_title('Prediction')
+    fig.colorbar(image1, ax=axes[0])
 
-image2 = axes[1].imshow(solution.detach().numpy(), cmap='jet', origin='lower', extent=[0, 1, 0, 1])
-axes[1].set_title('solution')
-fig.colorbar(image2, ax=axes[1])
+    image2 = axes[1].imshow(solution.detach().numpy(), cmap='jet', origin='lower', extent=[0, 1, 0, 1])
+    axes[1].set_title('solution')
+    fig.colorbar(image2, ax=axes[1])
 
-image3 = axes[2].imshow(res.detach().numpy(), cmap='jet', origin='lower', extent=[0, 1, 0, 1])
-axes[2].set_title('Residual')
-fig.colorbar(image3, ax=axes[2])
+    image3 = axes[2].imshow(res.detach().numpy(), cmap='jet', origin='lower', extent=[0, 1, 0, 1])
+    axes[2].set_title('Residual')
+    fig.colorbar(image3, ax=axes[2])
 
 
-fig.tight_layout()
-plt.savefig("prediction_and_residual.png")
-print(f'relative error={(torch.norm(res) / torch.norm(u(xx, yy))).item() * 100:.2f}%')
-plt.show()
+    fig.tight_layout()
+    plt.savefig("prediction_and_residual.png")
+    print(f'relative error={(torch.norm(res) / torch.norm(u(xx, yy))).item() * 100:.2f}%')
+    # plt.show()
+    return torch.norm(res) / torch.norm(u(xx, yy))
+
+if __name__ == "__main__":
+    wave()
