@@ -92,7 +92,7 @@ def poisson_boltzmann2d():
                 device=device, load=None)
 
 
-    net = vpinn.train("Poisson_Boltzmann", epoch_num=100, coef=10 ** (3 - np.log2(vpinn.grid_num)))
+    net = vpinn.train("Poisson_Boltzmann", epoch_num=10000, coef=10 ** (3 - np.log2(vpinn.grid_num)))
     net.cpu()
     # verify
     data = np.loadtxt('poisson_boltzmann2d.dat', skiprows=9)
