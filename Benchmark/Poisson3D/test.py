@@ -41,7 +41,7 @@ def poisson3d():
     # profiler.start()
 
     # net = vpinn.train('Poisson3d', epoch_num=10000, coef=1)
-    net = vpinn.train('Poisson3d', epoch_num=10000, coef=1)
+    net = vpinn.train('Poisson3d', epoch_num=10000, coef=10)
 
     # profiler.stop()
     # profiler.print()

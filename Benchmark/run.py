@@ -48,7 +48,7 @@ functions = [burgers_1d,
              poisson2d, poisson3d, poisson_boltzmann2d,
              wave]
 # command = 'python3 test.py'
-for i in range(2, 2, len(directorys)):
+for i in range(0, len(directorys)):
     err = [0, 0, 0]
     models = [None, None, None]
     figs = [None, None, None]
@@ -60,7 +60,7 @@ for i in range(2, 2, len(directorys)):
         err[j] = ret.item()
         with open(get_latest_file('./model'), "rb") as source_file:
             models[j] = source_file.read()
-    figs[j] = read_single_png_file('.')
+        figs[j] = read_single_png_file('.')
     err = np.array(err)
     min_index = np.argmin(err)
     with open(get_latest_file('./model'), "wb") as destination_file:
