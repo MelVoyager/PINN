@@ -63,7 +63,7 @@ def bc(boundary_num):
 def wave():
     device = 'cpu'
     vpinn = VPINN([2, 10, 10, 10, 1], pde, bc(80), area=[0, 1, 0, 1], Q=10, grid_num=8, test_fcn_num=5, 
-                device=device, load='Wave_std.pth')
+                device=device, load=None)
 
 
     net = vpinn.train("Wave", epoch_num=100, coef=1)

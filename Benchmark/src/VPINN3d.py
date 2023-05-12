@@ -184,7 +184,7 @@ class VPINN:
     
     
     def train(self, model_name, epoch_num=10000, coef=10):
-        optimizer = torch.optim.Adam(params=self.net.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(params=self.net.parameters())
             
         for i in tqdm(range(epoch_num)):
             optimizer.zero_grad()

@@ -28,6 +28,42 @@ def bc(boundary_num=10):
     xt = xt.reshape(-1, 1)
     tt = tt.reshape(-1, 1)
     
+    ######################################################################
+    # data = np.loadtxt('heat_multiscale_lesspoints.dat', skiprows=9)
+
+    # # get x、y、u of solution
+    # x_ = data[:, 0]
+    # y_ = data[:, 1]
+    # x = []
+    # y = []
+    # t = []
+    # u = []
+    # for i in range(26):
+    #     x.append(copy.deepcopy(x_))
+    #     y.append(copy.deepcopy(y_))
+    #     t.append([i * 0.2 for _ in range(len(x_))])
+    #     u.append(data[:, i + 2])
+
+    # x = np.concatenate(x)
+    # y = np.concatenate(y)
+    # t = np.concatenate(t)
+    # u = np.concatenate(u)
+    # tri = Triangulation(x, t)
+
+    # xx = torch.from_numpy(x).reshape(-1, 1).type(torch.float)
+    # yy = torch.from_numpy(y).reshape(-1, 1).type(torch.float)
+    # tt = torch.from_numpy(t).reshape(-1, 1).type(torch.float)
+    # uu = torch.from_numpy(u).reshape(-1, 1).type(torch.float)
+
+    # x_initial = xx[0:3000]
+    # y_initial = yy[0:3000]
+    # t_initial = tt[0:3000]
+    # u_initial = uu[0:3000]
+    # bc_xs = [x_initial]
+    # bc_ys = [y_initial]
+    # bc_ts = [t_initial]
+    # bc_us = [u_initial]
+    #########################################################################
     bc_xs = [xx, xt, xt, torch.full_like(xt, 0), torch.full_like(xt, 1)]
     bc_ys = [yy, torch.full_like(xx, 0), torch.full_like(xt, 1), xt, xt]
     bc_ts = [torch.zeros_like(xx), tt, tt, tt, tt]
@@ -41,13 +77,13 @@ def bc(boundary_num=10):
 
 def heat_2d_multi_scale():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    vpinn = VPINN([3, 20, 20, 20, 1],pde, bc(500), area=[0, 1, 0, 1, 0, 5], Q=10, grid_num=6, test_fcn_num=5, 
+    vpinn = VPINN([3, 10, 10, 10, 1],pde, bc(500), area=[0, 1, 0, 1, 0, 5], Q=10, grid_num=8, test_fcn_num=5, 
                 device=device, load=None)
 
     # profiler=Profiler()
     # profiler.start()
 
-    net = vpinn.train('Poisson3d', epoch_num=10000, coef=10)
+    net = vpinn.train('heat_2d_multi_scale', epoch_num=10000, coef=10)
 
     # profiler.stop()
     # profiler.print()
@@ -121,6 +157,7 @@ def heat_2d_multi_scale():
         axes[i].set_title(f'z={i}')
         fig.colorbar(image, ax=axes[i])
     plt.savefig('res.png')
+    torch.cuda.empty_cache()
     return err
 
 if __name__ == "__main__":
