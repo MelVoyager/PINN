@@ -71,7 +71,7 @@ def heat_darcy():
     vpinn = VPINN([3, 10, 10, 10, 1],pde, bc(100), area=[0, 1, 0, 1, 0, 5], Q=10, grid_num=4, test_fcn_num=5, 
                 device=device, load=None)
 
-    net = vpinn.train('heat_2d_multi_scale', epoch_num=10000, coef=10)
+    net = vpinn.train('heat_darcy', epoch_num=10000, coef=10)
     net.cpu()
     #############################################################################################
     # plot and verify
